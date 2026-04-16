@@ -1,0 +1,22 @@
+# Environment
+.env
+__pycache__/
+*.pyc
+
+# Database (each deployment gets its own)
+conversations.db
+
+# Generated images (re-generated on demand)
+static/generated/*.png
+
+# OS files
+.DS_Store
+*.swp
+
+# IDE
+.vscode/
+.idea/
+
+# Claude
+.claude/
+*.webp

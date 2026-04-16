@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Zombie History Project</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Zombie History">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% if google_client_id %}
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    {% endif %}
+</head>
+<body>
+
+    <!-- Background atmosphere -->
+    <canvas id="background-canvas"></canvas>
+
+    <!-- ========== LANDING PAGE ========== -->
+    <div class="app-container" id="landing-page">
+        <header class="site-header">
+            <h1 class="site-title">The <span class="zombie-text">Zombie</span> History Project</h1>
+            <p class="site-subtitle">Awaken the dead. Hear their stories.</p>
+            <div class="user-status" id="user-status"></div>
+        </header>
+
+        <div class="prompt-section">
+            <h2 class="prompt-question">Whose zombie would you like to awaken?</h2>
+            <div class="search-container">
+                <input
+                    type="text"
+                    class="search-input"
+                    id="search-input"
+                    placeholder="A name, a title, a soul from the past..."
+                    autocomplete="off"
+                >
+                <button class="search-btn" id="search-btn" title="Summon">&#9760;</button>
+            </div>
+        </div>
+
+        <div class="suggestions-section">
+            <p class="suggestions-label">&#8212; or choose a soul to summon &#8212;</p>
+            <div class="suggestions-grid" id="suggestions-grid">
+                {% for fig in suggestions %}
+                <div class="suggestion-card" data-name="{{ fig.name }}" data-era="{{ fig.era }}" data-location="{{ fig.location }}">
+                    <div class="suggestion-name">{{ fig.name }}</div>
+                    <div class="suggestion-era">{{ fig.era }}</div>
+                    <div class="suggestion-tagline">{{ fig.tagline }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="past-conversations-link" id="past-conversations-link" style="display:none;">
+                <a href="/history" class="btn btn-history">&#9760; Past Conversations</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== LOADING OVERLAY ========== -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="grave-animation">
+            <span class="grave-hand">&#129503;</span>
+        </div>
+        <div class="loading-text" id="loading-text">Disturbing the grave...</div>
+        <div class="loading-subtext" id="loading-subtext">The earth trembles</div>
+    </div>
+
+    <!-- ========== AUTH MODAL ========== -->
+    <div class="auth-modal-overlay" id="auth-modal">
+        <div class="auth-modal">
+            <button class="auth-modal-close" id="auth-modal-close">&times;</button>
+            <div class="auth-modal-header">
+                <h2 class="auth-modal-title">Save Your Conversations</h2>
+                <p class="auth-modal-subtitle">Create a free account to keep a history of your chats with the dead.</p>
+            </div>
+
+            {% if google_client_id %}
+            <div class="auth-google-section">
+                <div id="google-signin-btn"
+                     data-client-id="{{ google_client_id }}"
+                     style="display:flex; justify-content:center;"></div>
+            </div>
+            <div class="auth-divider"><span>or</span></div>
+            {% endif %}
+
+            <div class="auth-form-section">
+                <div class="auth-error" id="auth-error"></div>
+
+                <!-- Register form (default) -->
+                <form id="auth-register-form" class="auth-form">
+                    <input type="text" id="auth-username" class="auth-input" placeholder="Display name" autocomplete="name" required>
+                    <input type="email" id="auth-email" class="auth-input" placeholder="Email address" autocomplete="email" required>
+                    <input type="password" id="auth-password" class="auth-input" placeholder="Password (6+ characters)" autocomplete="new-password" required minlength="6">
+                    <button type="submit" class="btn btn-confirm auth-submit-btn">Create Account</button>
+                </form>
+
+                <!-- Login form (hidden by default) -->
+                <form id="auth-login-form" class="auth-form" style="display:none;">
+                    <input type="email" id="login-email" class="auth-input" placeholder="Email address" autocomplete="email" required>
+                    <input type="password" id="login-password" class="auth-input" placeholder="Password" autocomplete="current-password" required>
+                    <button type="submit" class="btn btn-confirm auth-submit-btn">Log In</button>
+                </form>
+
+                <div class="auth-toggle">
+                    <span id="auth-toggle-text">Already have an account?</span>
+                    <button type="button" class="auth-toggle-btn" id="auth-toggle-btn">Log in</button>
+                </div>
+            </div>
+
+            <button type="button" class="auth-skip-btn" id="auth-skip-btn">Skip for now &rarr;</button>
+        </div>
+    </div>
+
+    <!-- ========== CONFIRMATION MODAL ========== -->
+    <div class="confirmation-section" id="confirmation-section">
+        <div class="confirmation-image-wrap" id="confirmation-image-wrap">
+            <img class="confirmation-image" id="confirmation-image" src="" alt="">
+            <div class="image-loading-text" id="image-loading-text">Conjuring their likeness...</div>
+        </div>
+        <div class="confirmation-text" id="confirmation-text"></div>
+        <div class="confirmation-buttons">
+            <button class="btn btn-confirm" id="btn-confirm">Awaken Them</button>
+            <button class="btn btn-cancel" id="btn-cancel">Let Them Rest</button>
+        </div>
+    </div>
+
+    <!-- ========== CHAT VIEW ========== -->
+    <div class="chat-section" id="chat-section">
+        <div class="chat-layout">
+            <!-- Left sidebar: zombie portrait -->
+            <div class="chat-sidebar">
+                <img class="chat-sidebar-image" id="chat-sidebar-image" src="" alt="">
+                <div class="chat-sidebar-info">
+                    <div class="chat-figure-name" id="chat-figure-name"></div>
+                    <div class="chat-figure-detail" id="chat-figure-detail"></div>
+                </div>
+            </div>
+            <!-- Right side: chat -->
+            <div class="chat-main">
+                <div class="chat-header">
+                    <div class="chat-header-left" id="chat-save-hint" style="display:none;">
+                        <button class="chat-save-btn" id="chat-save-btn">Save conversations</button>
+                    </div>
+                    <button class="chat-back-btn" id="chat-back-btn">Return the Dead</button>
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                    <!-- Messages will be inserted here -->
+                    <div class="typing-indicator" id="typing-indicator">
+                        <div class="typing-dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <button class="chat-mic-btn" id="chat-mic-btn" title="Speak to the dead">&#127908;</button>
+                    <input
+                        type="text"
+                        class="chat-input"
+                        id="chat-input"
+                        placeholder="Ask the dead a question..."
+                        autocomplete="off"
+                    >
+                    <button class="chat-send-btn" id="chat-send-btn">&#9760;</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Pass server-side config to JS
+        window.GOOGLE_CLIENT_ID = "{{ google_client_id | default('', true) }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Register service worker for PWA support
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .then(reg => console.log('SW registered:', reg.scope))
+                .catch(err => console.log('SW registration failed:', err));
+        }
+    </script>
+</body>
+</html>

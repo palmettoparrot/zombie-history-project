@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Past Conversations — The Zombie History Project</title>
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Zombie History">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <!-- Background atmosphere -->
+    <canvas id="background-canvas"></canvas>
+
+    <!-- ========== HISTORY PAGE ========== -->
+    <div class="app-container" id="history-page">
+        <header class="site-header site-header-compact">
+            <h1 class="site-title site-title-sm">The <span class="zombie-text">Zombie</span> History Project</h1>
+            <p class="site-subtitle">The dead remember you.</p>
+        </header>
+
+        <div class="history-page-header">
+            <h2 class="prompt-question">Past Conversations</h2>
+            <a href="/" class="btn btn-back-home">&#8592; Summon New</a>
+        </div>
+
+        <div class="history-page-content">
+            {% if conversations %}
+            <div class="history-page-grid">
+                {% for conv in conversations %}
+                <div class="history-page-card" data-session-id="{{ conv.session_id }}">
+                    <div class="history-page-card-image-wrap">
+                        <img class="history-page-card-image"
+                             src="{{ conv.image_url or '' }}"
+                             alt="{{ conv.figure_name }}"
+                             onerror="this.style.display='none'">
+                    </div>
+                    <div class="history-page-card-info">
+                        <div class="history-page-card-name">{{ conv.figure_name }}</div>
+                        <div class="history-page-card-era">{{ conv.figure_era or '' }} &middot; {{ conv.figure_location or '' }}</div>
+                    </div>
+                    <button class="history-page-delete-btn" data-session-id="{{ conv.session_id }}" title="Delete">&times;</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="history-empty">
+                <p>No conversations yet. The dead await your call.</p>
+                <a href="/" class="btn btn-confirm">Summon a Zombie</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ========== LOADING OVERLAY ========== -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="grave-animation">
+            <span class="grave-hand">&#129503;</span>
+        </div>
+        <div class="loading-text" id="loading-text">Reawakening the dead...</div>
+        <div class="loading-subtext" id="loading-subtext">They remember you</div>
+    </div>
+
+    <!-- ========== CHAT VIEW ========== -->
+    <div class="chat-section" id="chat-section">
+        <div class="chat-header">
+            <img class="chat-portrait" id="chat-portrait" src="" alt="Portrait">
+            <div class="chat-figure-info">
+                <div class="chat-figure-name" id="chat-figure-name"></div>
+                <div class="chat-figure-detail" id="chat-figure-detail"></div>
+            </div>
+            <button class="chat-back-btn" id="chat-back-btn">Return the Dead</button>
+        </div>
+        <img class="chat-scene" id="chat-scene" src="" alt="Historical scene">
+        <div class="chat-messages" id="chat-messages">
+            <div class="typing-indicator" id="typing-indicator">
+                <div class="typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        </div>
+        <div class="chat-input-area">
+            <input
+                type="text"
+                class="chat-input"
+                id="chat-input"
+                placeholder="Ask the dead a question..."
+                autocomplete="off"
+            >
+            <button class="chat-send-btn" id="chat-send-btn">&#9760;</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/history.js') }}"></script>
+</body>
+</html>
