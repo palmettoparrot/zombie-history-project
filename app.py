@@ -533,6 +533,22 @@ def service_worker():
     return app.send_static_file("sw.js"), 200, {"Content-Type": "application/javascript", "Service-Worker-Allowed": "/"}
 
 
+@app.route("/api/health")
+def health_check():
+    """Health check — verify API keys and database."""
+    status = {"app": "running"}
+    status["anthropic_key"] = "set" if os.getenv("ANTHROPIC_API_KEY") else "MISSING"
+    status["google_key"] = "set" if os.getenv("GOOGLE_API_KEY") else "MISSING"
+    status["secret_key"] = "set" if app.secret_key else "MISSING"
+    try:
+        db = get_db()
+        count = db.execute("SELECT COUNT(*) FROM prefab_figures").fetchone()[0]
+        status["prefab_count"] = count
+    except Exception as e:
+        status["db_error"] = str(e)
+    return jsonify(status)
+
+
 @app.route("/")
 def index():
     user_id = session.get("user_id")
@@ -595,12 +611,17 @@ def identify_figure():
         return jsonify(figure_data)
 
     # No cache hit — use Haiku for identification
-    response = client.messages.create(
-        model="claude-3-haiku-20240307",
-        max_tokens=1024,
-        system=DISAMBIGUATE_PROMPT,
-        messages=[{"role": "user", "content": user_input}],
-    )
+    try:
+        response = client.messages.create(
+            model="claude-3-haiku-20240307",
+            max_tokens=1024,
+            system=DISAMBIGUATE_PROMPT,
+            messages=[{"role": "user", "content": user_input}],
+        )
+    except Exception as e:
+        print(f"Anthropic API error: {e}")
+        traceback.print_exc()
+        return jsonify({"error": f"Failed to reach the spirits. API error: {str(e)[:100]}"}), 500
 
     try:
         result_text = response.content[0].text
