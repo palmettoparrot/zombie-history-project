@@ -195,7 +195,7 @@ function speakZombie(text) {
     const region = (currentFigure?.voice_region || 'british').toLowerCase();
     const tweaks = REGION_VOICE_TWEAKS[region] || {};
 
-    let basePitch = gender === 'female' ? 0.55 : 0.35;
+    let basePitch = gender === 'female' ? 0.7 : 0.35;
     utterance.pitch = Math.max(0.01, basePitch + (tweaks.pitchOffset || 0));
     utterance.rate = tweaks.rate || 0.82;
     utterance.volume = 1.0;
