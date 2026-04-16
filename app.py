@@ -263,9 +263,16 @@ Describe what this person looked like ALIVE. This is the most important part. Be
      * Mediterranean/Southern European: Olive skin, dark hair, strong features.
      * Northern European: Fair skin, lighter hair.
      Do NOT default to Western European features for non-European people.
-  b) BODY TYPE: Based on their class and lifestyle. Royalty was well-fed — soft, full-figured. Peasants were lean and wiry from hard labor and poor nutrition. Warriors were strong but scarred. Nobody looked like a modern gym body.
-  c) CLOTHING: Accurate to their era and station, but now centuries old — faded, frayed, moth-eaten, dirt-stained.
-  d) TEETH: Pre-sugar cultures (before 1600s): worn and chipped but not rotten. Post-sugar Europe (1600s+): missing and blackened teeth, especially the wealthy who could afford sugar.
+  b) SIGNATURE FEATURES — THE MOST IMPORTANT PART: What makes this person INSTANTLY RECOGNIZABLE? Describe the features they are FAMOUS for prominently and early in the prompt. Examples:
+     * Blackbeard: massive long black beard, wild long dark hair, fearsome scowl
+     * Einstein: wild white frizzy hair, bushy mustache
+     * Genghis Khan: long braided hair, thin wispy beard, weathered Mongolian face
+     * Cleopatra: elaborate Egyptian headdress, kohl-lined eyes
+     * Viking warrior: long braided hair and beard, battle scars
+     If someone is named for a feature (Blackbeard, Longshanks, etc.), that feature MUST be prominent. If they are known for specific hair, facial hair, scars, accessories, or body features, describe those IN DETAIL.
+  c) BODY TYPE: Based on their class and lifestyle. Royalty was well-fed — soft, full-figured. Peasants were lean and wiry from hard labor and poor nutrition. Warriors were strong but scarred. Nobody looked like a modern gym body.
+  d) CLOTHING: Accurate to their era and station, but now centuries old — faded, frayed, moth-eaten, dirt-stained.
+  e) TEETH: Pre-sugar cultures (before 1600s): worn and chipped but not rotten. Post-sugar Europe (1600s+): missing and blackened teeth, especially the wealthy who could afford sugar.
 
 STEP 2 — ADD ZOMBIE DECAY (write this second, layered on top):
 Now add moderate undead decay ON TOP of the person you just described. Keep it simple — just say something like:
