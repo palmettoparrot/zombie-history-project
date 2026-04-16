@@ -1014,7 +1014,9 @@ def prebuild_figures():
     return jsonify({"results": results})
 
 
+# Always initialize DB (works with both gunicorn and direct python run)
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     port = int(os.environ.get("PORT", 5050))
     app.run(debug=True, port=port)
