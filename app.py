@@ -7,6 +7,8 @@ import urllib.parse
 import traceback
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
+import threading
+import time
 import requests
 import anthropic
 from google import genai
@@ -1023,6 +1025,109 @@ def prebuild_figures():
 
 # Always initialize DB (works with both gunicorn and direct python run)
 init_db()
+
+
+# ===== AUTO-PREBUILD ON STARTUP =====
+def auto_prebuild():
+    """Background thread: rebuild prefab cache if empty (handles Render's ephemeral disk)."""
+    # Wait a few seconds for the server to fully start
+    time.sleep(5)
+
+    # Use a direct DB connection (no Flask request context in background thread)
+    db = sqlite3.connect(DATABASE)
+    db.row_factory = sqlite3.Row
+    count = db.execute("SELECT COUNT(*) FROM prefab_figures").fetchone()[0]
+    db.close()
+
+    if count >= len(SUGGESTION_FIGURES):
+        print(f"Auto-prebuild: {count} prefab figures already cached, skipping.")
+        return
+
+    print(f"Auto-prebuild: only {count}/{len(SUGGESTION_FIGURES)} figures cached. Rebuilding...")
+
+    built = 0
+    errors = 0
+    for fig in SUGGESTION_FIGURES:
+        slug = figure_slug(fig["name"])
+
+        # Check if already cached (use direct DB, not get_db)
+        db = sqlite3.connect(DATABASE)
+        db.row_factory = sqlite3.Row
+        row = db.execute("SELECT * FROM prefab_figures WHERE slug = ?", (slug,)).fetchone()
+        db.close()
+
+        if row and row["image_url"]:
+            continue  # Already cached
+
+        try:
+            # Step 1: Identify with Haiku
+            query = f"{fig['name']} from {fig['location']}, {fig['era']}"
+            resp = client.messages.create(
+                model="claude-3-haiku-20240307",
+                max_tokens=1024,
+                system=DISAMBIGUATE_PROMPT,
+                messages=[{"role": "user", "content": query}],
+            )
+            result_text = resp.content[0].text
+            start = result_text.find("{")
+            end = result_text.rfind("}") + 1
+            figure_data = json.loads(result_text[start:end])
+
+            # Step 2: Generate image
+            image_prompt = figure_data.get("image_prompt", "")
+            image_url = get_image_url(image_prompt)
+
+            # Step 3: Build system prompt
+            system_prompt = ZOMBIE_SYSTEM_PROMPT.format(
+                name=figure_data.get("name", "Unknown"),
+                location=figure_data.get("location", "Unknown"),
+                era=figure_data.get("era", "Unknown"),
+                death_year=figure_data.get("death_year", "Unknown"),
+                description=figure_data.get("description", "a person from history"),
+            )
+
+            # Step 4: Generate 3 different opening messages
+            openings = []
+            for i in range(3):
+                resp = client.messages.create(
+                    model="claude-3-haiku-20240307",
+                    max_tokens=512,
+                    system=system_prompt,
+                    messages=[{"role": "user", "content": "You have just risen from your grave. Introduce yourself."}],
+                )
+                openings.append(resp.content[0].text)
+
+            # Step 5: Save to prefab cache (direct DB)
+            db = sqlite3.connect(DATABASE)
+            now = datetime.utcnow().isoformat()
+            db.execute(
+                """INSERT OR REPLACE INTO prefab_figures
+                (slug, figure_data, image_url, system_prompt, opening_messages, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)""",
+                (slug, json.dumps(figure_data), image_url, system_prompt, json.dumps(openings), now),
+            )
+            db.commit()
+            db.close()
+
+            built += 1
+            print(f"Auto-prebuild [{built}]: {fig['name']} ✓")
+
+            # Small delay between builds to avoid rate limits
+            time.sleep(2)
+
+        except Exception as e:
+            errors += 1
+            print(f"Auto-prebuild error for {fig['name']}: {e}")
+            traceback.print_exc()
+            time.sleep(5)  # Longer delay after errors
+
+    print(f"Auto-prebuild complete: {built} built, {errors} errors, {len(SUGGESTION_FIGURES) - built - errors} already cached.")
+
+
+# Start auto-prebuild in background thread (only if not already populated)
+prebuild_thread = threading.Thread(target=auto_prebuild, daemon=True)
+prebuild_thread.start()
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5050))
