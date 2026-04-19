@@ -1,12 +1,14 @@
 // Service Worker for The Zombie History Project (PWA)
 // Caches the app shell for fast loading; always fetches fresh API data.
 
-const CACHE_NAME = 'zombie-history-v1';
+const CACHE_VERSION = '2';
+const CACHE_NAME = `zombie-history-v${CACHE_VERSION}`;
 
 // App shell — static assets that rarely change
 const APP_SHELL = [
   '/',
   '/static/css/style.css',
+  '/static/js/shared.js',
   '/static/js/app.js',
   '/static/manifest.json',
   '/static/icons/icon-192x192.png',

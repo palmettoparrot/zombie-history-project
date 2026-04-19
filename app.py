@@ -22,6 +22,9 @@ load_dotenv(override=True)
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "zombie-history-project-secret-key-change-in-production")
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=365)
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("RENDER", "") != ""  # HTTPS only on Render
+app.config["SESSION_COOKIE_HTTPONLY"] = True   # No JS access to session cookie
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"  # Basic CSRF protection
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 google_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
@@ -237,6 +240,17 @@ def figure_slug(name):
     return name.lower().strip()
 
 
+def build_system_prompt(figure_data):
+    """Build the zombie system prompt from figure data dict."""
+    return ZOMBIE_SYSTEM_PROMPT.format(
+        name=figure_data.get("name", "Unknown"),
+        location=figure_data.get("location", "Unknown"),
+        era=figure_data.get("era", "Unknown"),
+        death_year=figure_data.get("death_year", "Unknown"),
+        description=figure_data.get("description", "a person from history"),
+    )
+
+
 # ===== PROMPTS =====
 DISAMBIGUATE_PROMPT = """You are a historical research assistant. The user wants to speak with a historical figure or type of person.
 
@@ -354,7 +368,7 @@ def get_image_url(prompt):
     """Generate image using Google Imagen 4 Fast."""
     try:
         # Check cache first
-        cache_key = prompt.strip()[:100]
+        cache_key = hashlib.md5(prompt.strip().encode()).hexdigest()
         if cache_key in image_cache:
             print(f"Image cache hit!")
             return image_cache[cache_key]
@@ -406,6 +420,69 @@ def get_image_url(prompt):
         print(f"Image generation failed: {e}")
         traceback.print_exc()
         return f"https://placehold.co/768x512/1a2618/4a7a3a?text={urllib.parse.quote(prompt[:30])}"
+
+
+# ===== SHARED FIGURE BUILDER =====
+def build_figure(name, location, era, num_openings=3, use_app_context=False):
+    """Build a complete prefab figure: identify, generate image, create openings, save to cache.
+
+    Used by: admin prebuild endpoint, auto-prebuild on startup, and auto-cache of new searches.
+    If use_app_context=True, uses get_db() (inside a request). Otherwise uses direct sqlite3 connection.
+    """
+    query = f"{name} from {location}, {era}"
+    resp = client.messages.create(
+        model="claude-3-haiku-20240307",
+        max_tokens=1024,
+        system=DISAMBIGUATE_PROMPT,
+        messages=[{"role": "user", "content": query}],
+    )
+    result_text = resp.content[0].text
+    start = result_text.find("{")
+    end = result_text.rfind("}") + 1
+    figure_data = json.loads(result_text[start:end])
+
+    # Generate image
+    image_prompt = figure_data.get("image_prompt", "")
+    image_url = get_image_url(image_prompt)
+
+    # Build system prompt
+    system_prompt = build_system_prompt(figure_data)
+
+    # Generate opening messages
+    openings = []
+    for i in range(num_openings):
+        resp = client.messages.create(
+            model="claude-3-haiku-20240307",
+            max_tokens=512,
+            system=system_prompt,
+            messages=[{"role": "user", "content": "You have just risen from your grave. Introduce yourself."}],
+        )
+        openings.append(resp.content[0].text)
+
+    # Save to prefab cache
+    slug = figure_slug(figure_data.get("name", ""))
+    if use_app_context:
+        save_prefab(slug, figure_data, image_url, system_prompt, openings)
+    else:
+        # Direct DB connection (for background threads outside Flask request context)
+        db = sqlite3.connect(DATABASE)
+        now = datetime.utcnow().isoformat()
+        db.execute(
+            """INSERT OR REPLACE INTO prefab_figures
+            (slug, figure_data, image_url, system_prompt, opening_messages, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)""",
+            (slug, json.dumps(figure_data), image_url, system_prompt, json.dumps(openings), now),
+        )
+        db.commit()
+        db.close()
+
+    return {
+        "figure_data": figure_data,
+        "image_url": image_url,
+        "system_prompt": system_prompt,
+        "openings": openings,
+        "slug": slug,
+    }
 
 
 # ===== AUTH ROUTES =====
@@ -661,13 +738,7 @@ def identify_figure():
 
         # Pre-generate the opening message in background while user views confirmation
         def generate_opening(fig_data):
-            system_prompt = ZOMBIE_SYSTEM_PROMPT.format(
-                name=fig_data.get("name", "Unknown"),
-                location=fig_data.get("location", "Unknown"),
-                era=fig_data.get("era", "Unknown"),
-                death_year=fig_data.get("death_year", "Unknown"),
-                description=fig_data.get("description", "a person from history"),
-            )
+            system_prompt = build_system_prompt(fig_data)
             resp = client.messages.create(
                 model="claude-3-haiku-20240307",
                 max_tokens=512,
@@ -683,25 +754,18 @@ def identify_figure():
         def cache_new_figure(fig_data, fig_key):
             """After image and opening are ready, save as prefab for future users."""
             try:
-                import time
                 time.sleep(2)  # Give image time to generate
-                img_url = ""
-                if fig_key in pending_images:
-                    img_url = pending_images[fig_key].result(timeout=60)
+                img_url = pending_images[fig_key].result(timeout=60) if fig_key in pending_images else ""
 
+                sys_prompt = ""
                 opening = ""
                 if fig_key in pending_openings:
                     result = pending_openings[fig_key].result(timeout=30)
                     opening = result.get("opening", "")
                     sys_prompt = result.get("system_prompt", "")
-                else:
-                    sys_prompt = ZOMBIE_SYSTEM_PROMPT.format(
-                        name=fig_data.get("name", "Unknown"),
-                        location=fig_data.get("location", "Unknown"),
-                        era=fig_data.get("era", "Unknown"),
-                        death_year=fig_data.get("death_year", "Unknown"),
-                        description=fig_data.get("description", "a person from history"),
-                    )
+
+                if not sys_prompt:
+                    sys_prompt = build_system_prompt(fig_data)
 
                 # Save to database directly (not using get_db since we're in a thread)
                 db = sqlite3.connect(DATABASE)
@@ -804,13 +868,7 @@ def start_conversation():
         del pending_openings[figure_key]
         print(f"Used pre-generated opening for {figure_key}")
     else:
-        system_prompt = ZOMBIE_SYSTEM_PROMPT.format(
-            name=figure.get("name", "Unknown"),
-            location=figure.get("location", "Unknown"),
-            era=figure.get("era", "Unknown"),
-            death_year=figure.get("death_year", "Unknown"),
-            description=figure.get("description", "a person from history"),
-        )
+        system_prompt = build_system_prompt(figure)
 
         response = client.messages.create(
             model="claude-3-haiku-20240307",
@@ -972,49 +1030,9 @@ def prebuild_figures():
             continue
 
         try:
-            # Step 1: Identify with Haiku
-            query = f"{fig['name']} from {fig['location']}, {fig['era']}"
-            resp = client.messages.create(
-                model="claude-3-haiku-20240307",
-                max_tokens=1024,
-                system=DISAMBIGUATE_PROMPT,
-                messages=[{"role": "user", "content": query}],
-            )
-            result_text = resp.content[0].text
-            start = result_text.find("{")
-            end = result_text.rfind("}") + 1
-            figure_data = json.loads(result_text[start:end])
-
-            # Step 2: Generate image
-            image_prompt = figure_data.get("image_prompt", "")
-            image_url = get_image_url(image_prompt)
-
-            # Step 3: Build system prompt
-            system_prompt = ZOMBIE_SYSTEM_PROMPT.format(
-                name=figure_data.get("name", "Unknown"),
-                location=figure_data.get("location", "Unknown"),
-                era=figure_data.get("era", "Unknown"),
-                death_year=figure_data.get("death_year", "Unknown"),
-                description=figure_data.get("description", "a person from history"),
-            )
-
-            # Step 4: Generate 3 different opening messages
-            openings = []
-            for i in range(3):
-                resp = client.messages.create(
-                    model="claude-3-haiku-20240307",
-                    max_tokens=512,
-                    system=system_prompt,
-                    messages=[{"role": "user", "content": "You have just risen from your grave. Introduce yourself."}],
-                )
-                openings.append(resp.content[0].text)
-
-            # Step 5: Save to prefab cache
-            save_prefab(slug, figure_data, image_url, system_prompt, openings)
-
-            results.append({"name": fig["name"], "status": "built", "image": image_url})
+            result = build_figure(fig["name"], fig["location"], fig["era"], use_app_context=True)
+            results.append({"name": fig["name"], "status": "built", "image": result["image_url"]})
             print(f"Pre-built: {fig['name']}")
-
         except Exception as e:
             results.append({"name": fig["name"], "status": f"error: {str(e)}"})
             print(f"Failed to pre-build {fig['name']}: {e}")
@@ -1060,61 +1078,10 @@ def auto_prebuild():
             continue  # Already cached
 
         try:
-            # Step 1: Identify with Haiku
-            query = f"{fig['name']} from {fig['location']}, {fig['era']}"
-            resp = client.messages.create(
-                model="claude-3-haiku-20240307",
-                max_tokens=1024,
-                system=DISAMBIGUATE_PROMPT,
-                messages=[{"role": "user", "content": query}],
-            )
-            result_text = resp.content[0].text
-            start = result_text.find("{")
-            end = result_text.rfind("}") + 1
-            figure_data = json.loads(result_text[start:end])
-
-            # Step 2: Generate image
-            image_prompt = figure_data.get("image_prompt", "")
-            image_url = get_image_url(image_prompt)
-
-            # Step 3: Build system prompt
-            system_prompt = ZOMBIE_SYSTEM_PROMPT.format(
-                name=figure_data.get("name", "Unknown"),
-                location=figure_data.get("location", "Unknown"),
-                era=figure_data.get("era", "Unknown"),
-                death_year=figure_data.get("death_year", "Unknown"),
-                description=figure_data.get("description", "a person from history"),
-            )
-
-            # Step 4: Generate 3 different opening messages
-            openings = []
-            for i in range(3):
-                resp = client.messages.create(
-                    model="claude-3-haiku-20240307",
-                    max_tokens=512,
-                    system=system_prompt,
-                    messages=[{"role": "user", "content": "You have just risen from your grave. Introduce yourself."}],
-                )
-                openings.append(resp.content[0].text)
-
-            # Step 5: Save to prefab cache (direct DB)
-            db = sqlite3.connect(DATABASE)
-            now = datetime.utcnow().isoformat()
-            db.execute(
-                """INSERT OR REPLACE INTO prefab_figures
-                (slug, figure_data, image_url, system_prompt, opening_messages, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)""",
-                (slug, json.dumps(figure_data), image_url, system_prompt, json.dumps(openings), now),
-            )
-            db.commit()
-            db.close()
-
+            build_figure(fig["name"], fig["location"], fig["era"])
             built += 1
             print(f"Auto-prebuild [{built}]: {fig['name']} ✓")
-
-            # Small delay between builds to avoid rate limits
-            time.sleep(2)
-
+            time.sleep(2)  # Small delay between builds to avoid rate limits
         except Exception as e:
             errors += 1
             print(f"Auto-prebuild error for {fig['name']}: {e}")

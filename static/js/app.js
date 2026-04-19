@@ -463,55 +463,7 @@ document.getElementById('chat-save-btn')?.addEventListener('click', () => {
     showAuthModal();
 });
 
-// ===== BACKGROUND ATMOSPHERE =====
-function initBackground() {
-    const canvas = document.getElementById('background-canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const particles = [];
-    const numParticles = 50;
-
-    for (let i = 0; i < numParticles; i++) {
-        particles.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: Math.random() * 2 + 0.5,
-            speedX: (Math.random() - 0.5) * 0.3,
-            speedY: (Math.random() - 0.5) * 0.2,
-            opacity: Math.random() * 0.15 + 0.05,
-        });
-    }
-
-    function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        particles.forEach(p => {
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(90, 154, 74, ${p.opacity})`;
-            ctx.fill();
-
-            p.x += p.speedX;
-            p.y += p.speedY;
-
-            if (p.x < 0) p.x = canvas.width;
-            if (p.x > canvas.width) p.x = 0;
-            if (p.y < 0) p.y = canvas.height;
-            if (p.y > canvas.height) p.y = 0;
-        });
-
-        requestAnimationFrame(animate);
-    }
-
-    animate();
-
-    window.addEventListener('resize', () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    });
-}
+// initBackground() is now in shared.js
 
 // ===== LOADING MESSAGES =====
 const loadingMessages = [
@@ -610,7 +562,7 @@ function showChat(figure, openingMessage) {
     const messages = chatMessages.querySelectorAll('.message');
     messages.forEach(m => m.remove());
 
-    addZombieMessage(openingMessage);
+    appAddZombieMessage(openingMessage);
     chatInput.focus();
 }
 
@@ -672,63 +624,25 @@ async function endConversation() {
 }
 
 // ===== CHAT MESSAGES =====
-function formatZombieText(text) {
-    // Split text on *action* patterns, preserving the delimiters
-    // Each *...* block becomes its own styled line
-    const parts = text.split(/(\*[^*]+\*)/g);
-    let html = '';
-    for (const part of parts) {
-        if (!part) continue;
-        if (part.startsWith('*') && part.endsWith('*')) {
-            // Action/stage direction — strip asterisks, style differently
-            const action = part.slice(1, -1).trim();
-            html += `<div class="action-text">${escapeHtml(action)}</div>`;
-        } else {
-            // Dialogue text
-            const trimmed = part.trim();
-            if (trimmed) {
-                html += `<div class="dialogue-text">${escapeHtml(trimmed)}</div>`;
-            }
-        }
-    }
-    return html;
-}
+// Core functions (escapeHtml, formatZombieText, scrollToBottom, etc.) are in shared.js
+// These wrappers bind them to this page's DOM elements and add voice
 
-function addZombieMessage(text) {
-    const div = document.createElement('div');
-    div.className = 'message message-zombie';
-    div.innerHTML = `<div class="message-sender">${escapeHtml(currentFigure?.name || 'The Dead')}</div>${formatZombieText(text)}`;
-    chatMessages.insertBefore(div, typingIndicator);
-    scrollToBottom();
+function appAddZombieMessage(text) {
+    addZombieMessage(chatMessages, typingIndicator, currentFigure?.name, text);
     // Auto-speak the zombie's message
     speakZombie(text);
 }
 
-function addUserMessage(text) {
-    const div = document.createElement('div');
-    div.className = 'message message-user';
-    div.textContent = text;
-    chatMessages.insertBefore(div, typingIndicator);
-    scrollToBottom();
+function appAddUserMessage(text) {
+    addUserMessage(chatMessages, typingIndicator, text);
 }
 
-function scrollToBottom() {
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+function appShowTyping() {
+    showTyping(typingIndicator, chatMessages);
 }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function showTyping() {
-    typingIndicator.classList.add('active');
-    scrollToBottom();
-}
-
-function hideTyping() {
-    typingIndicator.classList.remove('active');
+function appHideTyping() {
+    hideTyping(typingIndicator);
 }
 
 // ===== EVENT HANDLERS =====
@@ -748,7 +662,7 @@ async function handleSearch() {
         showConfirmation(figure);
     } catch (err) {
         hideLoading();
-        alert('The spirits could not be reached: ' + err.message);
+        showToast('The spirits could not be reached: ' + err.message);
     } finally {
         searchBtn.disabled = false;
     }
@@ -802,7 +716,7 @@ async function proceedToAwaken() {
         }
     } catch (err) {
         hideLoading();
-        alert('The ritual failed: ' + err.message);
+        showToast('The ritual failed: ' + err.message);
         showLanding();
     }
 }
@@ -821,16 +735,16 @@ async function handleChatSend() {
     chatSendBtn.disabled = true;
     chatInput.disabled = true;
 
-    addUserMessage(message);
-    showTyping();
+    appAddUserMessage(message);
+    appShowTyping();
 
     try {
         const result = await sendMessage(message);
-        hideTyping();
-        addZombieMessage(result.message);
+        appHideTyping();
+        appAddZombieMessage(result.message);
     } catch (err) {
-        hideTyping();
-        addZombieMessage("*bones rattle* ...forgive me, my mind went dark for a moment. The connection to the living world falters. Try again?");
+        appHideTyping();
+        appAddZombieMessage("*bones rattle* ...forgive me, my mind went dark for a moment. The connection to the living world falters. Try again?");
     } finally {
         chatSendBtn.disabled = false;
         chatInput.disabled = false;

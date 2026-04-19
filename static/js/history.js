@@ -17,55 +17,8 @@ const chatFigureName = document.getElementById('chat-figure-name');
 const chatFigureDetail = document.getElementById('chat-figure-detail');
 const typingIndicator = document.getElementById('typing-indicator');
 
-// ===== BACKGROUND =====
-function initBackground() {
-    const canvas = document.getElementById('background-canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    const particles = [];
-    for (let i = 0; i < 50; i++) {
-        particles.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: Math.random() * 2 + 0.5,
-            speedX: (Math.random() - 0.5) * 0.3,
-            speedY: (Math.random() - 0.5) * 0.2,
-            opacity: Math.random() * 0.15 + 0.05,
-        });
-    }
-
-    function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        particles.forEach(p => {
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(90, 154, 74, ${p.opacity})`;
-            ctx.fill();
-            p.x += p.speedX;
-            p.y += p.speedY;
-            if (p.x < 0) p.x = canvas.width;
-            if (p.x > canvas.width) p.x = 0;
-            if (p.y < 0) p.y = canvas.height;
-            if (p.y > canvas.height) p.y = 0;
-        });
-        requestAnimationFrame(animate);
-    }
-    animate();
-
-    window.addEventListener('resize', () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    });
-}
-
 // ===== HELPERS =====
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+// Core functions (escapeHtml, formatZombieText, addZombieMessage, etc.) are in shared.js
 
 function showLoading() {
     loadingOverlay.classList.add('active');
@@ -75,33 +28,20 @@ function hideLoading() {
     loadingOverlay.classList.remove('active');
 }
 
-function scrollToBottom() {
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+function histAddZombieMessage(text) {
+    addZombieMessage(chatMessages, typingIndicator, currentFigure?.name, text);
 }
 
-function addZombieMessage(text) {
-    const div = document.createElement('div');
-    div.className = 'message message-zombie';
-    div.innerHTML = `<div class="message-sender">${escapeHtml(currentFigure?.name || 'The Dead')}</div>${escapeHtml(text)}`;
-    chatMessages.insertBefore(div, typingIndicator);
-    scrollToBottom();
+function histAddUserMessage(text) {
+    addUserMessage(chatMessages, typingIndicator, text);
 }
 
-function addUserMessage(text) {
-    const div = document.createElement('div');
-    div.className = 'message message-user';
-    div.textContent = text;
-    chatMessages.insertBefore(div, typingIndicator);
-    scrollToBottom();
+function histShowTyping() {
+    showTyping(typingIndicator, chatMessages);
 }
 
-function showTyping() {
-    typingIndicator.classList.add('active');
-    scrollToBottom();
-}
-
-function hideTyping() {
-    typingIndicator.classList.remove('active');
+function histHideTyping() {
+    hideTyping(typingIndicator);
 }
 
 // ===== RESUME CONVERSATION =====
@@ -132,16 +72,16 @@ async function resumeConversation(sid) {
 
         data.messages.forEach(msg => {
             if (msg.role === 'assistant') {
-                addZombieMessage(msg.content);
+                histAddZombieMessage(msg.content);
             } else {
-                addUserMessage(msg.content);
+                histAddUserMessage(msg.content);
             }
         });
 
         chatInput.focus();
     } catch (err) {
         hideLoading();
-        alert('Could not reawaken this zombie: ' + err.message);
+        showToast('Could not reawaken this zombie: ' + err.message);
     }
 }
 
@@ -154,8 +94,8 @@ async function handleChatSend() {
     chatSendBtn.disabled = true;
     chatInput.disabled = true;
 
-    addUserMessage(message);
-    showTyping();
+    histAddUserMessage(message);
+    histShowTyping();
 
     try {
         const response = await fetch('/api/chat', {
@@ -164,11 +104,11 @@ async function handleChatSend() {
             body: JSON.stringify({ session_id: sessionId, message }),
         });
         const result = await response.json();
-        hideTyping();
-        addZombieMessage(result.message);
+        histHideTyping();
+        histAddZombieMessage(result.message);
     } catch (err) {
-        hideTyping();
-        addZombieMessage("*bones rattle* ...forgive me, my mind went dark for a moment. Try again?");
+        histHideTyping();
+        histAddZombieMessage("*bones rattle* ...forgive me, my mind went dark for a moment. Try again?");
     } finally {
         chatSendBtn.disabled = false;
         chatInput.disabled = false;
