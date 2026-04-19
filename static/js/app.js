@@ -672,10 +672,32 @@ async function endConversation() {
 }
 
 // ===== CHAT MESSAGES =====
+function formatZombieText(text) {
+    // Split text on *action* patterns, preserving the delimiters
+    // Each *...* block becomes its own styled line
+    const parts = text.split(/(\*[^*]+\*)/g);
+    let html = '';
+    for (const part of parts) {
+        if (!part) continue;
+        if (part.startsWith('*') && part.endsWith('*')) {
+            // Action/stage direction — strip asterisks, style differently
+            const action = part.slice(1, -1).trim();
+            html += `<div class="action-text">${escapeHtml(action)}</div>`;
+        } else {
+            // Dialogue text
+            const trimmed = part.trim();
+            if (trimmed) {
+                html += `<div class="dialogue-text">${escapeHtml(trimmed)}</div>`;
+            }
+        }
+    }
+    return html;
+}
+
 function addZombieMessage(text) {
     const div = document.createElement('div');
     div.className = 'message message-zombie';
-    div.innerHTML = `<div class="message-sender">${escapeHtml(currentFigure?.name || 'The Dead')}</div>${escapeHtml(text)}`;
+    div.innerHTML = `<div class="message-sender">${escapeHtml(currentFigure?.name || 'The Dead')}</div>${formatZombieText(text)}`;
     chatMessages.insertBefore(div, typingIndicator);
     scrollToBottom();
     // Auto-speak the zombie's message

@@ -770,6 +770,20 @@ body {
     margin-bottom: 5px;
 }
 
+.message-zombie .action-text {
+    color: var(--accent-green);
+    font-style: italic;
+    font-size: 0.92rem;
+    margin: 8px 0;
+    padding-left: 8px;
+    border-left: 2px solid rgba(74, 122, 58, 0.4);
+    opacity: 0.85;
+}
+
+.message-zombie .dialogue-text {
+    margin: 6px 0;
+}
+
 /* Typing indicator */
 .typing-indicator {
     display: none;
