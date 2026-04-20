@@ -1,7 +1,7 @@
 // Service Worker for The Zombie History Project (PWA)
 // Caches the app shell for fast loading; always fetches fresh API data.
 
-const CACHE_VERSION = '2';
+const CACHE_VERSION = '3';
 const CACHE_NAME = `zombie-history-v${CACHE_VERSION}`;
 
 // App shell — static assets that rarely change
@@ -13,6 +13,25 @@ const APP_SHELL = [
   '/static/manifest.json',
   '/static/icons/icon-192x192.png',
   '/static/icons/icon-512x512.png',
+  // Sound effects
+  '/static/sounds/bone-crack.mp3',
+  '/static/sounds/bone-snap.mp3',
+  '/static/sounds/creak.mp3',
+  '/static/sounds/creak-long.mp3',
+  '/static/sounds/chains.mp3',
+  '/static/sounds/metal-clink.mp3',
+  '/static/sounds/metal-clank.mp3',
+  '/static/sounds/earth-break.mp3',
+  '/static/sounds/earth-dig.mp3',
+  '/static/sounds/earth-rumble.mp3',
+  '/static/sounds/earth-move.mp3',
+  '/static/sounds/thud.mp3',
+  '/static/sounds/footsteps.mp3',
+  '/static/sounds/footsteps-crunch.mp3',
+  '/static/sounds/body-drop.mp3',
+  '/static/sounds/squish.mp3',
+  '/static/sounds/ghost.mp3',
+  '/static/sounds/fire.mp3',
 ];
 
 // Install: pre-cache the app shell
