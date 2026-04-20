@@ -465,7 +465,7 @@ document.getElementById('chat-save-btn')?.addEventListener('click', () => {
 
 // initBackground() is now in shared.js
 
-// ===== LOADING MESSAGES =====
+// ===== LOADING SCREEN =====
 const loadingMessages = [
     { text: "Disturbing the grave...", sub: "The earth trembles" },
     { text: "Searching the crypts...", sub: "Cobwebs part before you" },
@@ -475,15 +475,46 @@ const loadingMessages = [
     { text: "Summoning from the beyond...", sub: "Between worlds, a soul wanders" },
 ];
 
+// Loading music
+const loadingMusic = new Audio('/static/sounds/dead-awakened.mp3');
+loadingMusic.loop = true;
+loadingMusic.volume = 0.5;
+
 function showLoading() {
     const msg = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
     loadingText.textContent = msg.text;
     loadingSubtext.textContent = msg.sub;
+
+    // Reset the image animation so it plays fresh each time
+    const img = document.getElementById('loading-image');
+    if (img) {
+        img.style.animation = 'none';
+        // Force reflow to restart animation
+        void img.offsetHeight;
+        img.style.animation = '';
+    }
+
     loadingOverlay.classList.add('active');
+
+    // Play music (may be blocked by autoplay policy on first interaction,
+    // but by this point the user has clicked a button so it should be allowed)
+    loadingMusic.currentTime = 0;
+    loadingMusic.play().catch(() => {});
 }
 
 function hideLoading() {
     loadingOverlay.classList.remove('active');
+
+    // Fade out the music
+    const fadeOut = setInterval(() => {
+        if (loadingMusic.volume > 0.05) {
+            loadingMusic.volume = Math.max(0, loadingMusic.volume - 0.05);
+        } else {
+            loadingMusic.pause();
+            loadingMusic.volume = 0.5;  // Reset for next time
+            clearInterval(fadeOut);
+        }
+    }, 80);
 }
 
 // ===== VIEWS =====

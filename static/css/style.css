@@ -448,7 +448,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(10, 10, 10, 0.92);
+    background: rgba(5, 5, 5, 0.96);
     z-index: 100;
     flex-direction: column;
     align-items: center;
@@ -457,6 +457,54 @@ body {
 
 .loading-overlay.active {
     display: flex;
+}
+
+.loading-image-wrap {
+    margin-bottom: 30px;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 0 40px rgba(74, 122, 58, 0.15), 0 0 80px rgba(0, 0, 0, 0.6);
+}
+
+.loading-image {
+    width: 280px;
+    max-width: 70vw;
+    border-radius: 12px;
+    opacity: 0;
+    transform: scale(0.3);
+    transition: none;
+}
+
+.loading-overlay.active .loading-image {
+    animation: zombieReveal 12s ease-out forwards;
+}
+
+@keyframes zombieReveal {
+    0% {
+        opacity: 0;
+        transform: scale(0.3);
+        filter: brightness(0) blur(8px);
+    }
+    15% {
+        opacity: 0.6;
+        transform: scale(0.5);
+        filter: brightness(0.3) blur(4px);
+    }
+    40% {
+        opacity: 0.85;
+        transform: scale(0.7);
+        filter: brightness(0.6) blur(1px);
+    }
+    70% {
+        opacity: 0.95;
+        transform: scale(0.88);
+        filter: brightness(0.85) blur(0);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+        filter: brightness(1) blur(0);
+    }
 }
 
 .loading-text {
@@ -478,27 +526,6 @@ body {
 @keyframes pulse {
     0%, 100% { opacity: 0.6; }
     50% { opacity: 1; }
-}
-
-/* Hand reaching from grave animation */
-.grave-animation {
-    width: 120px;
-    height: 120px;
-    margin-bottom: 25px;
-    position: relative;
-}
-
-.grave-hand {
-    font-size: 60px;
-    animation: rise 2s ease-in-out infinite;
-    display: block;
-    text-align: center;
-    filter: grayscale(0.3);
-}
-
-@keyframes rise {
-    0%, 100% { transform: translateY(10px) rotate(-5deg); }
-    50% { transform: translateY(-10px) rotate(5deg); }
 }
 
 /* === CONFIRMATION MODAL === */
