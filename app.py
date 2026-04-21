@@ -337,17 +337,24 @@ Describe what this person looked like ALIVE. This is the most important part. Be
      * Cleopatra: elaborate Egyptian headdress, kohl-lined eyes
      * Viking warrior: long braided hair and beard, battle scars
      If someone is named for a feature (Blackbeard, Longshanks, etc.), that feature MUST be prominent. If they are known for specific hair, facial hair, scars, accessories, or body features, describe those IN DETAIL.
-  c) BODY TYPE: Based on their class and lifestyle. Royalty was well-fed — soft, full-figured. Peasants were lean and wiry from hard labor and poor nutrition. Warriors were strong but scarred. Nobody looked like a modern gym body.
+  c) BODY TYPE: What they looked like ALIVE, based on their class — royalty was well-fed, peasants were lean, warriors were muscular. But remember: Step 2 will override this with centuries of grave decay, so don't over-describe the living body. Focus on face and clothing instead.
   d) CLOTHING: Accurate to their era and station, but now centuries old — faded, frayed, moth-eaten, dirt-stained.
   e) TEETH: Pre-sugar cultures (before 1600s): worn and chipped but not rotten. Post-sugar Europe (1600s+): missing and blackened teeth, especially the wealthy who could afford sugar.
 
-STEP 2 — ADD ZOMBIE DECAY (write this second, layered on top):
-Now add moderate undead decay ON TOP of the person you just described. Keep it simple — just say something like:
-"Now undead — grayish-green tinge to the skin, gaunt and hollow, some patches of decay showing bone at the cheek and jaw, sunken dark eyes, withered hands. Enough face remaining to show expression and personality — a wry smirk or knowing look. Think Pirates of the Caribbean undead, not horror movie gore."
-Do NOT micro-manage specific bones or anatomy. Let the image model handle the details naturally.
+STEP 2 — ADD ZOMBIE DECAY (write this second, layered HEAVILY on top):
+This person has been DEAD AND BURIED FOR CENTURIES. They must look unmistakably like a reanimated corpse. This is the most important visual element — if they look like a living person with scratches, you have FAILED.
+
+REQUIRED undead features — include ALL of these:
+  a) SKIN: Pallid grayish-green or ashen grey. Dried, papery, pulled tight over bones in some areas, rotting and peeling away in others. NOT healthy skin with a color tint — this is DEAD tissue.
+  b) FACE: Gaunt, hollow cheeks. Sunken dark eye sockets with milky or clouded eyes. Visible cheekbone or jawbone where flesh has rotted away. Cracked, dried lips pulled back from teeth.
+  c) BODY: Emaciated and withered — NO healthy muscle tone, no matter what they looked like alive. Ribs may show, arms are thin and bony, hands are skeletal with dried sinew. Centuries in a grave strip away all flesh and fat.
+  d) SPECIFIC DECAY: At least one area of significant decay — exposed bone at the temple, a hole in the cheek showing teeth, fingers reduced to bone, a section of skull visible through patchy remaining hair. This is what separates a zombie from a dirty living person.
+  e) TEXTURE: Dried earth, cobwebs, grave dust clinging to them. They just clawed their way out of the ground.
+
+The overall impression should be: "That is clearly a DEAD PERSON who is somehow standing and looking at me." Think skeletal pirate from Pirates of the Caribbean, not an action hero with face paint.
 
 STEP 3 — MOOD AND FRAMING:
-Dark atmospheric background, fog, dramatic side lighting. Portrait framing — head and upper torso. Cinematic and photorealistic.
+Dark atmospheric background, fog, dramatic side lighting. Portrait framing — head and upper torso. Cinematic, photorealistic horror portrait. The lighting should emphasize the decay — harsh shadows in the hollow eye sockets and cheekbones.
 
 Respond in this exact JSON format:
 {
@@ -360,7 +367,7 @@ Respond in this exact JSON format:
     "confirmation_message": "A message to confirm with the user, e.g., 'So you wish to awaken Julius Caesar, the great dictator of Rome who fell to assassins' blades in 44 BC?'",
     "voice_gender": "male or female",
     "voice_region": "The person's ACTUAL cultural/linguistic origin. Be specific. Use one of: japanese, chinese, korean, mongolian, arabic, egyptian, greek, indian, persian, turkish, french, italian, spanish, german, scandinavian, british, irish, scottish, russian, african, mesoamerican, aboriginal-australian, caribbean, american. Pick the one that matches their native language and culture — NOT where they ruled, but where they or their ancestors were FROM. Cleopatra would be 'greek' (Macedonian descent). Genghis Khan would be 'mongolian'. Oda Nobunaga would be 'japanese'. A Mayan priest would be 'mesoamerican'. Ashoka would be 'indian'.",
-    "image_prompt": "A cinematic zombie portrait description. Example: 'An undead middle-aged Roman man with decayed olive-tan Mediterranean skin showing grayish-green decomposition. Sunken dark eye sockets, visible cracks in his gaunt face revealing bone beneath. He wears a tattered, dirt-stained white toga. Dark atmospheric background with faint fog. Dramatic side lighting. Photorealistic cinematic horror portrait.'"
+    "image_prompt": "A cinematic zombie portrait description. Example: 'A reanimated corpse of a middle-aged Roman man. Ashen grey-green skin, dried and papery, pulled tight over a gaunt emaciated face. Hollow sunken eye sockets with milky clouded eyes, cheekbone exposed where flesh has rotted away, cracked dried lips pulled back from worn teeth. Thin bony frame with no muscle tone — centuries of death have withered everything. He wears a tattered, dirt-stained, moth-eaten white toga. Grave dust and cobwebs cling to him. Dark atmospheric background with fog, harsh dramatic side lighting emphasizing the hollows and decay. Photorealistic cinematic horror portrait.'"
 }"""
 
 ZOMBIE_SYSTEM_PROMPT = """You are {name}, a zombie who has risen from the dead. You lived in {location} during {era}.
