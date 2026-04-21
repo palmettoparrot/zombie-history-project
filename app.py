@@ -472,30 +472,6 @@ def get_image_url(prompt):
             return url
         else:
             print(f"Imagen 4 returned no images — likely safety filter. Prompt: {prompt[:100]}...")
-            # Retry once with a toned-down prompt
-            try:
-                safe_prompt = (
-                    "A fantasy undead character portrait. Gaunt ancient figure with grey-green weathered skin, "
-                    "dark hollow eyes, skeletal features. Tattered old clothing, cobwebs. "
-                    "Dark foggy background, dramatic lighting. Cinematic photorealistic fantasy portrait."
-                )
-                retry = google_client.models.generate_images(
-                    model="imagen-4.0-fast-generate-001",
-                    prompt=safe_prompt,
-                    config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="3:4"),
-                )
-                if retry.generated_images:
-                    image_bytes = retry.generated_images[0].image.image_bytes
-                    filename = hashlib.md5(prompt.encode()).hexdigest() + ".png"
-                    filepath = os.path.join(GENERATED_IMAGES_DIR, filename)
-                    with open(filepath, "wb") as f:
-                        f.write(image_bytes)
-                    url = f"/static/generated/{filename}"
-                    image_cache[cache_key] = url
-                    print(f"Imagen 4 retry succeeded: {filename}")
-                    return url
-            except Exception:
-                pass
             return "/static/images/loading-zombie.jpg"
 
     except Exception as e:
@@ -1191,9 +1167,14 @@ init_db()
 
 
 # ===== AUTO-PREBUILD ON STARTUP =====
+# Google Imagen has a 70 images/day limit on paid tier 1.
+# Each figure needs 1 image. We build at most MAX_PREBUILD_PER_STARTUP figures
+# per deploy to stay well within quota, leaving room for user requests.
+MAX_PREBUILD_PER_STARTUP = 10
+
 def auto_prebuild():
-    """Background thread: rebuild prefab cache if empty (handles Render's ephemeral disk)."""
-    # Wait a few seconds for the server to fully start
+    """Background thread: rebuild prefab cache gradually (handles Render's ephemeral disk)."""
+    # Wait for the server to fully start
     time.sleep(5)
 
     # Use a direct DB connection (no Flask request context in background thread)
@@ -1206,11 +1187,16 @@ def auto_prebuild():
         print(f"Auto-prebuild: {count} prefab figures already cached, skipping.")
         return
 
-    print(f"Auto-prebuild: only {count}/{len(SUGGESTION_FIGURES)} figures cached. Rebuilding...")
+    print(f"Auto-prebuild: only {count}/{len(SUGGESTION_FIGURES)} figures cached. Building up to {MAX_PREBUILD_PER_STARTUP} this startup...")
 
     built = 0
     errors = 0
+    quota_hit = False
     for fig in SUGGESTION_FIGURES:
+        # Stop if we've built enough this startup or hit quota
+        if built >= MAX_PREBUILD_PER_STARTUP or quota_hit:
+            break
+
         slug = figure_slug(fig["name"])
 
         # Check if already cached (use direct DB, not get_db)
@@ -1225,15 +1211,22 @@ def auto_prebuild():
         try:
             build_figure(fig["name"], fig["location"], fig["era"])
             built += 1
-            print(f"Auto-prebuild [{built}]: {fig['name']} ✓")
-            time.sleep(2)  # Small delay between builds to avoid rate limits
+            print(f"Auto-prebuild [{built}/{MAX_PREBUILD_PER_STARTUP}]: {fig['name']} ✓")
+            time.sleep(3)  # Delay between builds to avoid rate limits
         except Exception as e:
-            errors += 1
-            print(f"Auto-prebuild error for {fig['name']}: {e}")
-            traceback.print_exc()
-            time.sleep(5)  # Longer delay after errors
+            error_str = str(e).lower()
+            # Stop immediately if we hit Google's quota limit
+            if "429" in str(e) or "quota" in error_str or "resource_exhausted" in error_str:
+                print(f"Auto-prebuild: hit API quota limit, stopping. Will continue next restart.")
+                quota_hit = True
+            else:
+                errors += 1
+                print(f"Auto-prebuild error for {fig['name']}: {e}")
+                traceback.print_exc()
+                time.sleep(5)  # Longer delay after errors
 
-    print(f"Auto-prebuild complete: {built} built, {errors} errors, {len(SUGGESTION_FIGURES) - built - errors} already cached.")
+    remaining = len(SUGGESTION_FIGURES) - count - built
+    print(f"Auto-prebuild done: {built} built, {errors} errors. {remaining} remaining for next restart.")
 
 
 # Start auto-prebuild in background thread (only if not already populated)
