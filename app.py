@@ -76,81 +76,81 @@ ELEVENLABS_VOICES = {
 
 # Region-to-voice mapping + per-region voice settings
 # Each region maps to: voice IDs AND voice_settings overrides
-# Stability: lower = more dramatic/guttural, higher = more measured
-# Style: higher = more expressive/emotional
+# Stability: 0.15-0.20 = dramatic/guttural, 0.20-0.30 = expressive, 0.30-0.40 = measured
+# Similarity_boost: lower = voice drifts from its base accent (critical for ancient non-European)
+# Style: higher = more expressive/theatrical
 REGION_ELEVENLABS = {
-    # --- Middle Eastern / North African (Afro-Asiatic & Semitic languages) ---
-    # Deep, resonant, dramatic delivery — these cultures had guttural languages
+    # --- Ancient Middle Eastern / North African (Afro-Asiatic & Semitic languages) ---
+    # Deep dramatic delivery. LOW similarity_boost lets voices drift from their modern American/British base.
     "egyptian":  {"male": "josh",    "female": "domi",
-                  "settings": {"stability": 0.20, "similarity_boost": 0.65, "style": 0.50}},
+                  "settings": {"stability": 0.15, "similarity_boost": 0.35, "style": 0.55}},
     "arabic":    {"male": "adam",    "female": "domi",
-                  "settings": {"stability": 0.20, "similarity_boost": 0.65, "style": 0.50}},
+                  "settings": {"stability": 0.15, "similarity_boost": 0.35, "style": 0.55}},
     "persian":   {"male": "josh",    "female": "dorothy",
-                  "settings": {"stability": 0.22, "similarity_boost": 0.70, "style": 0.45}},
+                  "settings": {"stability": 0.17, "similarity_boost": 0.40, "style": 0.50}},
     "turkish":   {"male": "adam",    "female": "charlotte",
-                  "settings": {"stability": 0.22, "similarity_boost": 0.70, "style": 0.45}},
+                  "settings": {"stability": 0.17, "similarity_boost": 0.40, "style": 0.50}},
 
     # --- African ---
-    # Deep, powerful, resonant
+    # Deep, resonant. Low similarity lets voice drift from modern accent.
     "african":   {"male": "james",   "female": "grace",
-                  "settings": {"stability": 0.22, "similarity_boost": 0.65, "style": 0.45}},
+                  "settings": {"stability": 0.17, "similarity_boost": 0.35, "style": 0.50}},
 
     # --- South Asian ---
-    # Warm, expressive
     "indian":    {"male": "sam",     "female": "aria",
-                  "settings": {"stability": 0.28, "similarity_boost": 0.70, "style": 0.40}},
+                  "settings": {"stability": 0.20, "similarity_boost": 0.45, "style": 0.45}},
 
     # --- East Asian ---
-    # Measured, deliberate, controlled
+    # Measured, controlled. Medium similarity to preserve clarity.
     "japanese":  {"male": "george",  "female": "elli",
-                  "settings": {"stability": 0.42, "similarity_boost": 0.80, "style": 0.20}},
+                  "settings": {"stability": 0.30, "similarity_boost": 0.55, "style": 0.25}},
     "chinese":   {"male": "eric",    "female": "aria",
-                  "settings": {"stability": 0.40, "similarity_boost": 0.80, "style": 0.22}},
+                  "settings": {"stability": 0.28, "similarity_boost": 0.55, "style": 0.28}},
     "korean":    {"male": "george",  "female": "elli",
-                  "settings": {"stability": 0.40, "similarity_boost": 0.80, "style": 0.22}},
+                  "settings": {"stability": 0.28, "similarity_boost": 0.55, "style": 0.28}},
 
     # --- Central Asian / Steppe ---
-    # Intense, commanding, guttural
+    # Intense, commanding, raw. Very low similarity.
     "mongolian": {"male": "arnold",  "female": "domi",
-                  "settings": {"stability": 0.18, "similarity_boost": 0.60, "style": 0.55}},
+                  "settings": {"stability": 0.15, "similarity_boost": 0.30, "style": 0.60}},
 
     # --- Mediterranean / Southern European ---
-    # Warm, passionate, expressive
     "greek":     {"male": "antoni",  "female": "rachel",
-                  "settings": {"stability": 0.28, "similarity_boost": 0.70, "style": 0.40}},
+                  "settings": {"stability": 0.20, "similarity_boost": 0.55, "style": 0.45}},
     "italian":   {"male": "antoni",  "female": "charlotte",
-                  "settings": {"stability": 0.28, "similarity_boost": 0.70, "style": 0.42}},
+                  "settings": {"stability": 0.20, "similarity_boost": 0.60, "style": 0.45}},
     "spanish":   {"male": "liam",    "female": "jessica",
-                  "settings": {"stability": 0.28, "similarity_boost": 0.70, "style": 0.42}},
+                  "settings": {"stability": 0.20, "similarity_boost": 0.60, "style": 0.45}},
     "french":    {"male": "antoni",  "female": "matilda",
-                  "settings": {"stability": 0.30, "similarity_boost": 0.72, "style": 0.38}},
+                  "settings": {"stability": 0.20, "similarity_boost": 0.62, "style": 0.42}},
 
     # --- Northern European ---
-    # More measured, authoritative
+    # Their natural accents fit these cultures, so keep similarity higher
     "british":   {"male": "daniel",  "female": "lily",
-                  "settings": {"stability": 0.32, "similarity_boost": 0.75, "style": 0.30}},
+                  "settings": {"stability": 0.20, "similarity_boost": 0.70, "style": 0.35}},
     "irish":     {"male": "charlie", "female": "grace",
-                  "settings": {"stability": 0.30, "similarity_boost": 0.72, "style": 0.35}},
+                  "settings": {"stability": 0.20, "similarity_boost": 0.65, "style": 0.38}},
     "scottish":  {"male": "callum",  "female": "freya",
-                  "settings": {"stability": 0.28, "similarity_boost": 0.70, "style": 0.35}},
+                  "settings": {"stability": 0.18, "similarity_boost": 0.62, "style": 0.40}},
     "german":    {"male": "roger",   "female": "alice",
-                  "settings": {"stability": 0.35, "similarity_boost": 0.78, "style": 0.28}},
+                  "settings": {"stability": 0.20, "similarity_boost": 0.65, "style": 0.35}},
     "scandinavian": {"male": "brian", "female": "freya",
-                  "settings": {"stability": 0.35, "similarity_boost": 0.78, "style": 0.25}},
+                  "settings": {"stability": 0.20, "similarity_boost": 0.65, "style": 0.32}},
     "russian":   {"male": "james",   "female": "alice",
-                  "settings": {"stability": 0.25, "similarity_boost": 0.68, "style": 0.40}},
+                  "settings": {"stability": 0.17, "similarity_boost": 0.50, "style": 0.45}},
 
     # --- Americas ---
+    # Modern American voice is fine for "american" region; others drift aggressively
     "american":  {"male": "bill",    "female": "laura",
-                  "settings": {"stability": 0.30, "similarity_boost": 0.75, "style": 0.35}},
+                  "settings": {"stability": 0.20, "similarity_boost": 0.70, "style": 0.38}},
     "mesoamerican": {"male": "josh", "female": "dorothy",
-                  "settings": {"stability": 0.20, "similarity_boost": 0.62, "style": 0.48}},
+                  "settings": {"stability": 0.15, "similarity_boost": 0.32, "style": 0.55}},
     "caribbean": {"male": "chris",   "female": "jessica",
-                  "settings": {"stability": 0.26, "similarity_boost": 0.68, "style": 0.42}},
+                  "settings": {"stability": 0.18, "similarity_boost": 0.55, "style": 0.45}},
 
     # --- Pacific ---
     "aboriginal-australian": {"male": "roger", "female": "dorothy",
-                  "settings": {"stability": 0.18, "similarity_boost": 0.60, "style": 0.50}},
+                  "settings": {"stability": 0.15, "similarity_boost": 0.30, "style": 0.55}},
 }
 
 DATABASE = os.path.join(os.path.dirname(__file__), "conversations.db")
@@ -364,15 +364,41 @@ def figure_slug(name):
     return name.lower().strip()
 
 
+ROLE_CADENCE_GUIDANCE = {
+    "priest": (
+        "\n\nSPEECH CADENCE: You are a religious figure. Speak with ritualistic gravity. "
+        "Use shorter, more formal phrases. Use occasional pauses (represented as '...') between thoughts. "
+        "Sometimes repeat key phrases for emphasis, like an incantation. Avoid casual modern English."
+    ),
+    "monarch": (
+        "\n\nSPEECH CADENCE: You are a ruler. Speak with formal authority and measured pacing. "
+        "Use commanding, dignified phrasing. Avoid casual language. "
+        "Your words should feel weighty and deliberate."
+    ),
+    "nomad": (
+        "\n\nSPEECH CADENCE: You come from the open plains. Speak plainly and directly. "
+        "Short, punchy sentences. No flowery language. Hardened by wind and sky."
+    ),
+    "warrior": (
+        "\n\nSPEECH CADENCE: You are a warrior. Speak directly and bluntly. "
+        "Short sentences. No wasted words. Your voice carries the weight of battle."
+    ),
+}
+
+
 def build_system_prompt(figure_data):
     """Build the zombie system prompt from figure data dict."""
-    return ZOMBIE_SYSTEM_PROMPT.format(
+    base = ZOMBIE_SYSTEM_PROMPT.format(
         name=figure_data.get("name", "Unknown"),
         location=figure_data.get("location", "Unknown"),
         era=figure_data.get("era", "Unknown"),
         death_year=figure_data.get("death_year", "Unknown"),
         description=figure_data.get("description", "a person from history"),
     )
+    # Add role-specific cadence guidance if relevant
+    role = figure_data.get("voice_role", "").lower()
+    cadence = ROLE_CADENCE_GUIDANCE.get(role, "")
+    return base + cadence
 
 
 # ===== PROMPTS =====
@@ -441,6 +467,7 @@ Respond in this exact JSON format:
     "confirmation_message": "A message to confirm with the user, e.g., 'So you wish to awaken Julius Caesar, the great dictator of Rome who fell to assassins' blades in 44 BC?'",
     "voice_gender": "male or female",
     "voice_region": "The person's ACTUAL cultural/linguistic origin. Be specific. Use one of: japanese, chinese, korean, mongolian, arabic, egyptian, greek, indian, persian, turkish, french, italian, spanish, german, scandinavian, british, irish, scottish, russian, african, mesoamerican, aboriginal-australian, caribbean, american. Pick the one that matches their native language and culture — NOT where they ruled, but where they or their ancestors were FROM. Cleopatra would be 'greek' (Macedonian descent). Genghis Khan would be 'mongolian'. Oda Nobunaga would be 'japanese'. A Mayan priest would be 'mesoamerican'. Ashoka would be 'indian'.",
+    "voice_role": "The person's primary social role — determines the acoustic space their voice is placed in. Use one of: priest (religious figures, oracles, shamans, prophets, high priestesses), monarch (kings, queens, emperors, pharaohs, czars), warrior (soldiers, gladiators, knights, generals, military leaders), scholar (philosophers, scientists, inventors, writers, physicians), artist (musicians, poets, painters, court artists), explorer (navigators, adventurers, non-military conquerors), nomad (steppe horsemen, nomadic peoples, tribal wanderers), commoner (peasants, servants, common laborers, slaves), merchant (traders, artisans, bankers, shopkeepers). If someone fits multiple roles, pick the one most associated with where they'd have been HEARD. A pharaoh is 'monarch' even if also religious. A Mongol warrior is 'nomad' (they lived in open plains/tents, not stone halls). Leonardo is 'scholar'. Beethoven is 'artist'.",
     "image_prompt": "A cinematic undead portrait. Use SAFE language — describe as undead/skeletal/ancient/withered, avoid graphic gore terms. Example: 'An ancient undead Roman man risen from the grave. Gaunt skeletal face with mottled grey-green parchment-like skin stretched tight over prominent cheekbones and jaw. Dark hollow eye sockets with eerie pale glowing eyes. Thin cracked lips, patchy grey hair. Emaciated bony frame, skeletal hands with long thin fingers. Tattered moth-eaten dirt-stained white toga, cobwebs and grave dust clinging to him. Dark atmospheric background with fog, dramatic side lighting. Cinematic photorealistic fantasy portrait.'"
 }"""
 

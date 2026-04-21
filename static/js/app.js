@@ -28,9 +28,53 @@ const searchInput = document.getElementById('search-input');
 const searchBtn = document.getElementById('search-btn');
 const typingIndicator = document.getElementById('typing-indicator');
 
-// ===== ZOMBIE VOICE (ElevenLabs Text-to-Speech) =====
-let currentZombieAudio = null;   // Currently playing Audio object
-let zombieVoiceEnabled = true;   // User can toggle voice on/off
+// ===== ZOMBIE VOICE (ElevenLabs + Web Audio API processing) =====
+let currentZombieSource = null;   // Currently playing AudioBufferSourceNode
+let zombieAudioContext = null;    // Shared AudioContext
+let zombieVoiceEnabled = true;    // User can toggle voice on/off
+
+// Universal zombie audio effect: slower playback = lower pitch + slower speech
+// 0.9 = roughly -1.5 semitones + 10% slower. Feels undead without being unintelligible.
+const ZOMBIE_PLAYBACK_RATE = 0.9;
+
+// Role-based reverb — the acoustic space this character's voice is placed in.
+// decay = seconds of reverb tail; wet = how much reverb vs dry signal (0-1)
+const ROLE_REVERB = {
+    priest:   { decay: 4.5, wet: 0.45 },   // Temple — long stone echo
+    monarch:  { decay: 2.8, wet: 0.38 },   // Palace / throne room
+    warrior:  { decay: 1.6, wet: 0.30 },   // Stone hall / battlefield
+    scholar:  { decay: 0.9, wet: 0.20 },   // Study / library — warm, small
+    artist:   { decay: 1.1, wet: 0.22 },   // Small chamber
+    explorer: { decay: 0.4, wet: 0.12 },   // Open-ish air
+    merchant: { decay: 0.5, wet: 0.14 },   // Small market stall
+    nomad:    { decay: 0.15, wet: 0.05 },  // Tent / open plains — nearly dry
+    commoner: { decay: 0.2, wet: 0.06 },   // Dry, outdoor/simple room
+    default:  { decay: 1.0, wet: 0.22 },
+};
+
+function getAudioContext() {
+    if (!zombieAudioContext || zombieAudioContext.state === 'closed') {
+        zombieAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return zombieAudioContext;
+}
+
+// Generate a synthetic impulse response (IR) for convolution reverb.
+// No external files needed — we build the IR on the fly.
+function generateImpulseResponse(audioContext, decaySeconds) {
+    const sampleRate = audioContext.sampleRate;
+    const length = Math.max(1, Math.floor(sampleRate * decaySeconds));
+    const impulse = audioContext.createBuffer(2, length, sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+        const data = impulse.getChannelData(ch);
+        for (let i = 0; i < length; i++) {
+            // Exponential decay with noise — sounds like a real reverberant space
+            const t = i / length;
+            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3);
+        }
+    }
+    return impulse;
+}
 
 async function speakZombie(text) {
     if (!zombieVoiceEnabled) return;
@@ -40,6 +84,7 @@ async function speakZombie(text) {
 
     const gender = (currentFigure?.voice_gender || 'male').toLowerCase();
     const region = (currentFigure?.voice_region || 'british').toLowerCase();
+    const role = (currentFigure?.voice_role || 'default').toLowerCase();
 
     try {
         const response = await fetch('/api/speak', {
@@ -54,32 +99,61 @@ async function speakZombie(text) {
             return;
         }
 
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        audio.volume = 1.0;
-        currentZombieAudio = audio;
+        const arrayBuffer = await response.arrayBuffer();
+        const ctx = getAudioContext();
 
-        audio.onended = () => {
-            URL.revokeObjectURL(audioUrl);
-            currentZombieAudio = null;
-        };
-        audio.onerror = () => {
-            URL.revokeObjectURL(audioUrl);
-            currentZombieAudio = null;
+        // Resume context if suspended (autoplay policy)
+        if (ctx.state === 'suspended') await ctx.resume();
+
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+
+        // --- Build the audio processing chain ---
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.playbackRate.value = ZOMBIE_PLAYBACK_RATE;  // Pitch shift + slowdown
+
+        // Role-based reverb
+        const reverbCfg = ROLE_REVERB[role] || ROLE_REVERB.default;
+
+        if (reverbCfg.wet > 0) {
+            const convolver = ctx.createConvolver();
+            convolver.buffer = generateImpulseResponse(ctx, reverbCfg.decay);
+
+            const dryGain = ctx.createGain();
+            dryGain.gain.value = 1 - reverbCfg.wet;
+
+            const wetGain = ctx.createGain();
+            wetGain.gain.value = reverbCfg.wet;
+
+            // source → dry → out
+            // source → convolver → wet → out
+            source.connect(dryGain);
+            source.connect(convolver);
+            convolver.connect(wetGain);
+            dryGain.connect(ctx.destination);
+            wetGain.connect(ctx.destination);
+        } else {
+            source.connect(ctx.destination);
+        }
+
+        source.onended = () => {
+            if (currentZombieSource === source) currentZombieSource = null;
         };
 
-        await audio.play();
+        currentZombieSource = source;
+        source.start(0);
+
+        console.log(`Zombie voice: ${region}/${gender}/${role}, reverb=${reverbCfg.decay}s wet=${reverbCfg.wet}, rate=${ZOMBIE_PLAYBACK_RATE}`);
     } catch (err) {
-        console.warn('ElevenLabs error:', err.message, '— falling back to browser voice');
+        console.warn('ElevenLabs/AudioContext error:', err.message, '— falling back to browser voice');
         speakZombieFallback(text, gender, region);
     }
 }
 
 function stopZombieSpeech() {
-    if (currentZombieAudio) {
-        currentZombieAudio.pause();
-        currentZombieAudio = null;
+    if (currentZombieSource) {
+        try { currentZombieSource.stop(); } catch (e) {}
+        currentZombieSource = null;
     }
     // Also stop any browser fallback speech
     if (window.speechSynthesis) window.speechSynthesis.cancel();
