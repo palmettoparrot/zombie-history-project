@@ -232,6 +232,10 @@ image_cache = {}
 # Pending image generation futures
 pending_images = {}
 
+# Last image generation error — exposed via /api/health for debugging
+last_image_error = None
+last_image_error_time = None
+
 # Pending opening message futures (pre-generated while user sees confirmation)
 pending_openings = {}
 
@@ -600,6 +604,7 @@ SUGGESTION_FIGURES = [
 # ===== IMAGE GENERATION =====
 def get_image_url(prompt):
     """Generate image using Google Imagen 4 Fast."""
+    global last_image_error, last_image_error_time
     try:
         # Check cache first
         cache_key = hashlib.md5(prompt.strip().encode()).hexdigest()
@@ -646,10 +651,18 @@ def get_image_url(prompt):
             print(f"Imagen 4 image saved: {filename}")
             return url
         else:
-            print(f"Imagen 4 returned no images — likely safety filter. Prompt: {prompt[:100]}...")
+            last_image_error = f"No images returned (likely safety filter) — prompt: {prompt[:80]}..."
+            last_image_error_time = datetime.utcnow().isoformat()
+            print(f"Imagen 4 {last_image_error}")
             return None
 
     except Exception as e:
+        err = str(e)
+        if "429" in err or "quota" in err.lower() or "resource_exhausted" in err.lower():
+            last_image_error = f"Imagen daily quota exhausted (70/day on paid tier 1). Resets at midnight Pacific."
+        else:
+            last_image_error = f"Imagen error: {err[:200]}"
+        last_image_error_time = datetime.utcnow().isoformat()
         print(f"Image generation failed: {e}")
         traceback.print_exc()
         return None
@@ -872,6 +885,10 @@ def health_check():
         status["prefab_count"] = count
     except Exception as e:
         status["db_error"] = str(e)
+    # Surface the last image generation failure for debugging
+    if last_image_error:
+        status["last_image_error"] = last_image_error
+        status["last_image_error_time"] = last_image_error_time
     return jsonify(status)
 
 
