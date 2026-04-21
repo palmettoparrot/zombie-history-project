@@ -427,6 +427,92 @@ function showLanding() {
     searchInput.focus();
 }
 
+// ===== CONFIRMATION IMAGE-LOADING ATMOSPHERE =====
+const cryptMessages = [
+    "Prying open the crypt...",
+    "The stone scrapes aside...",
+    "Something stirs in the dark...",
+    "Brushing the dust from their face...",
+    "The veil between worlds thins...",
+    "Cold fingers reach through the earth...",
+    "A shape forms in the shadows...",
+    "The dead do not forget their face...",
+];
+
+// Atmospheric sounds for the image-loading phase
+const cryptThud = new Audio('/static/sounds/thud.mp3');
+const cryptCreak = new Audio('/static/sounds/creak-long.mp3');
+const cryptRumble = new Audio('/static/sounds/earth-rumble.mp3');
+let cryptThudInterval = null;
+let cryptMessageInterval = null;
+let cryptSoundsPlaying = false;
+
+function startCryptAtmosphere() {
+    if (cryptSoundsPlaying) return;
+    cryptSoundsPlaying = true;
+
+    // Play a long creak to open
+    cryptCreak.volume = 0.3;
+    cryptCreak.currentTime = 0;
+    cryptCreak.play().catch(() => {});
+
+    // After the creak, start a low rumble
+    setTimeout(() => {
+        if (!cryptSoundsPlaying) return;
+        cryptRumble.volume = 0.15;
+        cryptRumble.currentTime = 0;
+        cryptRumble.play().catch(() => {});
+    }, 1500);
+
+    // Slow rhythmic thuds — like pounding from inside a coffin
+    let thudCount = 0;
+    cryptThudInterval = setInterval(() => {
+        if (!cryptSoundsPlaying) return;
+        cryptThud.volume = 0.2 + Math.random() * 0.15; // Slight variation
+        cryptThud.currentTime = 0;
+        cryptThud.play().catch(() => {});
+        thudCount++;
+    }, 2200);
+
+    // Cycle through eerie text messages
+    let msgIndex = Math.floor(Math.random() * cryptMessages.length);
+    imageLoadingText.textContent = cryptMessages[msgIndex];
+    cryptMessageInterval = setInterval(() => {
+        msgIndex = (msgIndex + 1) % cryptMessages.length;
+        // Fade out, swap text, fade in
+        imageLoadingText.style.opacity = '0';
+        setTimeout(() => {
+            imageLoadingText.textContent = cryptMessages[msgIndex];
+            imageLoadingText.style.opacity = '1';
+        }, 400);
+    }, 3500);
+}
+
+function stopCryptAtmosphere() {
+    cryptSoundsPlaying = false;
+
+    if (cryptThudInterval) {
+        clearInterval(cryptThudInterval);
+        cryptThudInterval = null;
+    }
+    if (cryptMessageInterval) {
+        clearInterval(cryptMessageInterval);
+        cryptMessageInterval = null;
+    }
+
+    // Fade out all crypt sounds
+    [cryptThud, cryptCreak, cryptRumble].forEach(audio => {
+        const fadeOut = setInterval(() => {
+            if (audio.volume > 0.03) {
+                audio.volume = Math.max(0, audio.volume - 0.03);
+            } else {
+                audio.pause();
+                clearInterval(fadeOut);
+            }
+        }, 60);
+    });
+}
+
 function showConfirmation(figure) {
     landingPage.style.display = 'none';
     confirmationText.textContent = figure.confirmation_message;
@@ -443,6 +529,8 @@ function showConfirmation(figure) {
         confirmationImage.alt = '';
         confirmationImage.classList.add('image-loading');
         imageLoadingText.style.display = 'block';
+        // Start atmospheric sounds and text cycling
+        startCryptAtmosphere();
         // Start polling for the image
         pollForImage(figure.figure_key);
     }
@@ -466,6 +554,8 @@ async function pollForImage(figureKey) {
                 confirmationImage.alt = 'Historical scene';
                 confirmationImage.classList.remove('image-loading');
                 imageLoadingText.style.display = 'none';
+                // Stop the atmospheric sounds
+                stopCryptAtmosphere();
                 // Update current figure with the image URL
                 if (currentFigure) {
                     currentFigure.image_url = data.image_url;
@@ -476,6 +566,8 @@ async function pollForImage(figureKey) {
             // Keep polling
         }
     }
+    // Timed out — stop sounds anyway
+    stopCryptAtmosphere();
 }
 
 function showChat(figure, openingMessage) {
@@ -627,6 +719,7 @@ document.getElementById('btn-confirm').addEventListener('click', async () => {
 });
 
 async function proceedToAwaken() {
+    stopCryptAtmosphere();
     confirmationSection.classList.remove('active');
     showLoading();
     loadingText.textContent = "The dead awakens...";
@@ -651,6 +744,7 @@ async function proceedToAwaken() {
 }
 
 document.getElementById('btn-cancel').addEventListener('click', () => {
+    stopCryptAtmosphere();
     currentFigure = null;
     showLanding();
 });

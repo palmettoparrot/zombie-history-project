@@ -584,7 +584,10 @@ body {
     color: var(--accent-green-glow);
     text-shadow: 0 0 10px rgba(90, 154, 74, 0.4);
     animation: pulse 2s ease-in-out infinite;
+    transition: opacity 0.4s ease;
     pointer-events: none;
+    width: 90%;
+    text-align: center;
 }
 
 .confirmation-image.image-loading ~ .image-loading-text {
