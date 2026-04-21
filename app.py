@@ -31,9 +31,9 @@ client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 google_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 
-# ElevenLabs voice library — 37 pre-made voices available
+# ElevenLabs voice library — pre-made + custom community voices
 ELEVENLABS_VOICES = {
-    # Male voices
+    # --- Pre-made male voices ---
     "daniel":    "onwK4e9ZLuTAKqWW03F9",   # Authoritative British
     "adam":      "pNInz6obpgDQGcFmaJgB",   # Deep, resonant
     "arnold":    "VR6AewLTigWG4xSOukaG",   # Gruff, intense
@@ -55,7 +55,7 @@ ELEVENLABS_VOICES = {
     "liam":      "TX3LPaxmHKxFdv7VOQHJ",   # Strong, clear
     "will":      "bIHbv24MWmeRgasZH58o",   # Warm, approachable
     "river":     "SAz9YHcvj6GT2YYXdXww",   # Smooth, calm
-    # Female voices
+    # --- Pre-made female voices ---
     "sarah":     "EXAVITQu4vr4xnSDxMaL",   # Soft, expressive
     "alice":     "Xb7hH8MSUJpSbSDYk0k2",   # Confident, clear
     "lily":      "pFZP5JQG7iQjIQuC4Bku",   # Warm British
@@ -72,6 +72,69 @@ ELEVENLABS_VOICES = {
     "glinda":    "z9fAnlkpzviPz146aGWa",   # Unique, expressive
     "laura":     "FGY2WhTYpPnrIDTdsKH5",   # Warm, natural
     "aria":      "g5CIjZEefAph4nQFvHAz",   # Musical, clear
+
+    # --- Custom community voices (curated for zombie essence) ---
+    # DARK / ANCIENT / HORROR (for role-based overrides)
+    "dante":        "wXvR48IpOq9HACltTmt7",   # Growly, raspy, menacing — WARRIOR
+    "victor":       "cPoqAvGWCPfCfyPMwe4z",   # Deep, slow, malevolent, ancient — MONARCH
+    "caleb":        "DQCYGgKbvha45IXs96FO",   # The Dark Wizard — PRIEST (special settings)
+    "agatha":       "HH3kybY6uEJ2ebSa9Vy3",   # Villainous, echoing, ancient witch — PRIESTESS
+    "raven":        "Df0A8fHl2LOO7kDNIlpg",   # Deep, dark, mysterious female — QUEEN/EMPRESS
+    "larauque":     "LifjXiNLcYfyYJD8PCDT",   # Hoarse, deep, dramatic, cinematic
+    "ethereal_husk": "jpUA5miJyO2ygonZPVsO",  # Gravely, atmospheric female storyteller
+    "victor_hale":  "CVP7d0EDsPO8YR2fweYp",   # Deep, dark, raspy, European/German accent
+    "nephilia":     "r3pMaobgFa3QoTEBmnk4",   # Velvet-toned fallen angel, Polish accent
+    "monika":       "6aO1exAR9bDruq155LzQ",   # Sinister, slow, creepy female
+    # RESERVED — for future "cursed/insane" voice variant
+    "gollum":       "1zvnni6XluAvqQJWPf1M",   # Raspy, fractured, small voice
+    "xukas":        "xYWUvKNK6zWCgsdAK7Wi",   # Reptilian, hissing, monstrous
+    "jet_du":       "mEHuKdn0uRQSMynXjRNO",   # Eerie whispered male
+    "mira":         "thNHFcPYszCz6ZPG6mUp",   # Gentle whispered female
+    # REGIONAL ACCENTS
+    "vlad":         "XjdmlV0OFXfXE6Mg2Sb7",   # Eastern European male, mysterious
+    "artemis":      "4Eq5uDjZLBd4UhQpKwuP",   # Slight Russian accent female
+    "petra":        "ztyYYqlYMny7nllhThgo",   # Hard German accent female
+    "lison":        "CKfuQaJKfvUG2Wtrda3Y",   # Soft French accent female
+    "cristiano":    "IpCcRCVYm2nsZJjBFn4H",   # Portuguese accent male
+    "charles":      "IT5cb4lfodSX8eyXUzyO",   # Afrikaans-colored male
+    # NICHE (held for future use)
+    "taro":         "UznIBkKIQe3ZG2tGydre",   # Young Japanese (too upbeat for zombies)
+    "bachlava":     "ZXx7nI6BzemJq3Qy0ZUL",   # Young expressive English
+    "darryl":       "O8ykjWKd0RjX6e5EyDuE",   # Malaysian male
+    "jawid":        "wIwafQRMRzBqGgHCoUm0",   # Malaysian English
+    "anna":         "brM9iIbwDREZaWL8luun",   # Thai female
+}
+
+# Role-based voice overrides — applied BEFORE region lookup.
+# These archetypes are distinctive enough that the voice defines the character
+# more than the culture does.
+ROLE_VOICE_OVERRIDES = {
+    # Priests, oracles, shamans, prophets — ritualistic delivery
+    "priest": {
+        "male":   "caleb",      # Dark wizard — formal ritualistic delivery
+        "female": "agatha",     # Ancient witch — commanding, echoing
+    },
+    # Ancient monarchs — pharaohs, emperors, ancient kings/queens
+    "monarch": {
+        "male":   "victor",     # Deep, slow, malevolent, ancient
+        "female": "raven",      # Deep, dark, mysterious, commanding
+    },
+    # Warriors — generals, soldiers, gladiators
+    "warrior": {
+        "male":   "dante",      # Growly, raspy, menacing
+        "female": "raven",      # Authoritative female warrior
+    },
+}
+
+# Per-voice settings overrides — some voices have creator-specified settings
+# that sound better than our universal zombie defaults.
+VOICE_SETTINGS_OVERRIDES = {
+    "caleb": {
+        # Caleb's creator: "Slow down the speed, increase stability, 95% similarity"
+        "stability": 0.85,
+        "similarity_boost": 0.95,
+        "style": 0.30,
+    },
 }
 
 # Region-to-voice mapping + per-region voice settings
@@ -80,77 +143,74 @@ ELEVENLABS_VOICES = {
 # Similarity_boost: lower = voice drifts from its base accent (critical for ancient non-European)
 # Style: higher = more expressive/theatrical
 REGION_ELEVENLABS = {
-    # --- Ancient Middle Eastern / North African (Afro-Asiatic & Semitic languages) ---
-    # Deep dramatic delivery. LOW similarity_boost lets voices drift from their modern American/British base.
-    "egyptian":  {"male": "josh",    "female": "domi",
-                  "settings": {"stability": 0.15, "similarity_boost": 0.35, "style": 0.55}},
-    "arabic":    {"male": "adam",    "female": "domi",
-                  "settings": {"stability": 0.15, "similarity_boost": 0.35, "style": 0.55}},
-    "persian":   {"male": "josh",    "female": "dorothy",
-                  "settings": {"stability": 0.17, "similarity_boost": 0.40, "style": 0.50}},
-    "turkish":   {"male": "adam",    "female": "charlotte",
-                  "settings": {"stability": 0.17, "similarity_boost": 0.40, "style": 0.50}},
+    # --- Ancient Middle Eastern / North African ---
+    # Use custom dark voices with European accents — closer to Semitic/Afro-Asiatic feel
+    "egyptian":  {"male": "victor_hale", "female": "nephilia",
+                  "settings": {"stability": 0.20, "similarity_boost": 0.70, "style": 0.45}},
+    "arabic":    {"male": "victor_hale", "female": "nephilia",
+                  "settings": {"stability": 0.20, "similarity_boost": 0.70, "style": 0.45}},
+    "persian":   {"male": "victor_hale", "female": "nephilia",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.70, "style": 0.42}},
+    "turkish":   {"male": "victor_hale", "female": "nephilia",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.70, "style": 0.42}},
 
     # --- African ---
-    # Deep, resonant. Low similarity lets voice drift from modern accent.
-    "african":   {"male": "james",   "female": "grace",
-                  "settings": {"stability": 0.17, "similarity_boost": 0.35, "style": 0.50}},
+    # Afrikaans-colored male + deep mysterious female
+    "african":   {"male": "charles",  "female": "raven",
+                  "settings": {"stability": 0.20, "similarity_boost": 0.75, "style": 0.42}},
 
     # --- South Asian ---
-    "indian":    {"male": "sam",     "female": "aria",
-                  "settings": {"stability": 0.20, "similarity_boost": 0.45, "style": 0.45}},
+    "indian":    {"male": "sam",      "female": "aria",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.55, "style": 0.42}},
 
     # --- East Asian ---
-    # Measured, controlled. Medium similarity to preserve clarity.
-    "japanese":  {"male": "george",  "female": "elli",
-                  "settings": {"stability": 0.30, "similarity_boost": 0.55, "style": 0.25}},
-    "chinese":   {"male": "eric",    "female": "aria",
-                  "settings": {"stability": 0.28, "similarity_boost": 0.55, "style": 0.28}},
-    "korean":    {"male": "george",  "female": "elli",
-                  "settings": {"stability": 0.28, "similarity_boost": 0.55, "style": 0.28}},
+    "japanese":  {"male": "george",   "female": "elli",
+                  "settings": {"stability": 0.30, "similarity_boost": 0.60, "style": 0.28}},
+    "chinese":   {"male": "eric",     "female": "aria",
+                  "settings": {"stability": 0.28, "similarity_boost": 0.60, "style": 0.30}},
+    "korean":    {"male": "george",   "female": "elli",
+                  "settings": {"stability": 0.28, "similarity_boost": 0.60, "style": 0.30}},
 
     # --- Central Asian / Steppe ---
-    # Intense, commanding, raw. Very low similarity.
-    "mongolian": {"male": "arnold",  "female": "domi",
-                  "settings": {"stability": 0.15, "similarity_boost": 0.30, "style": 0.60}},
+    # Hoarse male, gravelly female — evokes ancient steppe
+    "mongolian": {"male": "larauque", "female": "ethereal_husk",
+                  "settings": {"stability": 0.18, "similarity_boost": 0.70, "style": 0.48}},
 
     # --- Mediterranean / Southern European ---
-    "greek":     {"male": "antoni",  "female": "rachel",
-                  "settings": {"stability": 0.20, "similarity_boost": 0.55, "style": 0.45}},
-    "italian":   {"male": "antoni",  "female": "charlotte",
-                  "settings": {"stability": 0.20, "similarity_boost": 0.60, "style": 0.45}},
-    "spanish":   {"male": "liam",    "female": "jessica",
-                  "settings": {"stability": 0.20, "similarity_boost": 0.60, "style": 0.45}},
-    "french":    {"male": "antoni",  "female": "matilda",
-                  "settings": {"stability": 0.20, "similarity_boost": 0.62, "style": 0.42}},
+    "greek":     {"male": "antoni",   "female": "rachel",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.60, "style": 0.42}},
+    "italian":   {"male": "antoni",   "female": "charlotte",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.65, "style": 0.42}},
+    "spanish":   {"male": "cristiano", "female": "jessica",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.70, "style": 0.42}},
+    "french":    {"male": "antoni",   "female": "lison",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.68, "style": 0.40}},
 
     # --- Northern European ---
-    # Their natural accents fit these cultures, so keep similarity higher
-    "british":   {"male": "daniel",  "female": "lily",
-                  "settings": {"stability": 0.20, "similarity_boost": 0.70, "style": 0.35}},
-    "irish":     {"male": "charlie", "female": "grace",
-                  "settings": {"stability": 0.20, "similarity_boost": 0.65, "style": 0.38}},
-    "scottish":  {"male": "callum",  "female": "freya",
-                  "settings": {"stability": 0.18, "similarity_boost": 0.62, "style": 0.40}},
-    "german":    {"male": "roger",   "female": "alice",
-                  "settings": {"stability": 0.20, "similarity_boost": 0.65, "style": 0.35}},
+    "british":   {"male": "daniel",   "female": "lily",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.70, "style": 0.35}},
+    "irish":     {"male": "charlie",  "female": "grace",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.65, "style": 0.38}},
+    "scottish":  {"male": "callum",   "female": "freya",
+                  "settings": {"stability": 0.20, "similarity_boost": 0.62, "style": 0.40}},
+    "german":    {"male": "victor_hale", "female": "petra",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.70, "style": 0.35}},
     "scandinavian": {"male": "brian", "female": "freya",
-                  "settings": {"stability": 0.20, "similarity_boost": 0.65, "style": 0.32}},
-    "russian":   {"male": "james",   "female": "alice",
-                  "settings": {"stability": 0.17, "similarity_boost": 0.50, "style": 0.45}},
+                  "settings": {"stability": 0.22, "similarity_boost": 0.65, "style": 0.32}},
+    "russian":   {"male": "vlad",     "female": "artemis",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.75, "style": 0.38}},
 
     # --- Americas ---
-    # Modern American voice is fine for "american" region; others drift aggressively
-    "american":  {"male": "bill",    "female": "laura",
-                  "settings": {"stability": 0.20, "similarity_boost": 0.70, "style": 0.38}},
-    "mesoamerican": {"male": "josh", "female": "dorothy",
-                  "settings": {"stability": 0.15, "similarity_boost": 0.32, "style": 0.55}},
-    "caribbean": {"male": "chris",   "female": "jessica",
-                  "settings": {"stability": 0.18, "similarity_boost": 0.55, "style": 0.45}},
+    "american":  {"male": "bill",     "female": "laura",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.70, "style": 0.38}},
+    "mesoamerican": {"male": "larauque", "female": "ethereal_husk",
+                  "settings": {"stability": 0.18, "similarity_boost": 0.70, "style": 0.48}},
+    "caribbean": {"male": "chris",    "female": "jessica",
+                  "settings": {"stability": 0.20, "similarity_boost": 0.60, "style": 0.42}},
 
     # --- Pacific ---
-    "aboriginal-australian": {"male": "roger", "female": "dorothy",
-                  "settings": {"stability": 0.15, "similarity_boost": 0.30, "style": 0.55}},
+    "aboriginal-australian": {"male": "larauque", "female": "ethereal_husk",
+                  "settings": {"stability": 0.18, "similarity_boost": 0.70, "style": 0.48}},
 }
 
 DATABASE = os.path.join(os.path.dirname(__file__), "conversations.db")
@@ -1154,6 +1214,7 @@ def speak():
     text = data.get("text", "").strip()
     gender = data.get("gender", "male").lower()
     region = data.get("region", "british").lower()
+    role = data.get("role", "").lower()
 
     if not text:
         return jsonify({"error": "No text provided"}), 400
@@ -1163,21 +1224,40 @@ def speak():
     if not clean_text or clean_text == '...':
         return jsonify({"error": "No dialogue to speak"}), 400
 
-    # Select voice and settings based on region and gender
+    # --- Voice selection ---
+    # Priority 1: role override (priest/monarch/warrior use archetypal voices)
+    # Priority 2: region-based mapping
+    voice_key = None
+    source = "region"
+    if role in ROLE_VOICE_OVERRIDES:
+        voice_key = ROLE_VOICE_OVERRIDES[role].get(gender)
+        if voice_key:
+            source = f"role:{role}"
+
+    # Fall back to region lookup
     region_map = REGION_ELEVENLABS.get(region, REGION_ELEVENLABS.get("british"))
-    voice_key = region_map.get(gender, region_map.get("male", "daniel"))
+    if not voice_key:
+        voice_key = region_map.get(gender, region_map.get("male", "daniel"))
+
     voice_id = ELEVENLABS_VOICES.get(voice_key, ELEVENLABS_VOICES["daniel"])
 
-    # Per-region voice settings — changes how dramatic/measured the delivery is
-    region_settings = region_map.get("settings", {})
+    # --- Voice settings ---
+    # Priority 1: per-voice override (e.g. Caleb's creator-specified settings)
+    # Priority 2: region-based settings
+    if voice_key in VOICE_SETTINGS_OVERRIDES:
+        settings_source = VOICE_SETTINGS_OVERRIDES[voice_key]
+    else:
+        settings_source = region_map.get("settings", {})
+
     voice_settings = {
-        "stability": region_settings.get("stability", 0.30),
-        "similarity_boost": region_settings.get("similarity_boost", 0.75),
-        "style": region_settings.get("style", 0.35),
+        "stability": settings_source.get("stability", 0.22),
+        "similarity_boost": settings_source.get("similarity_boost", 0.70),
+        "style": settings_source.get("style", 0.40),
         "use_speaker_boost": True,
     }
 
-    print(f"TTS: {region}/{gender} → {voice_key} (stability={voice_settings['stability']}, style={voice_settings['style']})")
+    print(f"TTS: {region}/{gender}/{role or '-'} → {voice_key} via {source} "
+          f"(stability={voice_settings['stability']}, style={voice_settings['style']})")
 
     try:
         response = requests.post(

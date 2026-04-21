@@ -90,7 +90,7 @@ async function speakZombie(text) {
         const response = await fetch('/api/speak', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, gender, region }),
+            body: JSON.stringify({ text, gender, region, role }),
         });
 
         if (!response.ok) {
