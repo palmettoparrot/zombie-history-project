@@ -683,6 +683,7 @@ def health_check():
     status = {"app": "running"}
     status["anthropic_key"] = "set" if os.getenv("ANTHROPIC_API_KEY") else "MISSING"
     status["google_key"] = "set" if os.getenv("GOOGLE_API_KEY") else "MISSING"
+    status["elevenlabs_key"] = "set" if ELEVENLABS_API_KEY else "MISSING"
     status["secret_key"] = "set" if app.secret_key else "MISSING"
     try:
         db = get_db()
