@@ -471,13 +471,37 @@ def get_image_url(prompt):
             print(f"Imagen 4 image saved: {filename}")
             return url
         else:
-            print("Imagen 4 returned no images")
-            return f"https://placehold.co/768x512/1a2618/4a7a3a?text=No+Image"
+            print(f"Imagen 4 returned no images — likely safety filter. Prompt: {prompt[:100]}...")
+            # Retry once with a toned-down prompt
+            try:
+                safe_prompt = (
+                    "A fantasy undead character portrait. Gaunt ancient figure with grey-green weathered skin, "
+                    "dark hollow eyes, skeletal features. Tattered old clothing, cobwebs. "
+                    "Dark foggy background, dramatic lighting. Cinematic photorealistic fantasy portrait."
+                )
+                retry = google_client.models.generate_images(
+                    model="imagen-4.0-fast-generate-001",
+                    prompt=safe_prompt,
+                    config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="3:4"),
+                )
+                if retry.generated_images:
+                    image_bytes = retry.generated_images[0].image.image_bytes
+                    filename = hashlib.md5(prompt.encode()).hexdigest() + ".png"
+                    filepath = os.path.join(GENERATED_IMAGES_DIR, filename)
+                    with open(filepath, "wb") as f:
+                        f.write(image_bytes)
+                    url = f"/static/generated/{filename}"
+                    image_cache[cache_key] = url
+                    print(f"Imagen 4 retry succeeded: {filename}")
+                    return url
+            except Exception:
+                pass
+            return "/static/images/loading-zombie.jpg"
 
     except Exception as e:
         print(f"Image generation failed: {e}")
         traceback.print_exc()
-        return f"https://placehold.co/768x512/1a2618/4a7a3a?text={urllib.parse.quote(prompt[:30])}"
+        return "/static/images/loading-zombie.jpg"
 
 
 # ===== SHARED FIGURE BUILDER =====
