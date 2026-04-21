@@ -431,7 +431,7 @@ def build_figure(name, location, era, num_openings=3, use_app_context=False):
     """
     query = f"{name} from {location}, {era}"
     resp = client.messages.create(
-        model="claude-3-5-haiku-20241022",
+        model="claude-sonnet-4-20250514",
         max_tokens=1024,
         system=DISAMBIGUATE_PROMPT,
         messages=[{"role": "user", "content": query}],
@@ -452,7 +452,7 @@ def build_figure(name, location, era, num_openings=3, use_app_context=False):
     openings = []
     for i in range(num_openings):
         resp = client.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-sonnet-4-20250514",
             max_tokens=512,
             system=system_prompt,
             messages=[{"role": "user", "content": "You have just risen from your grave. Introduce yourself."}],
@@ -699,7 +699,7 @@ def identify_figure():
     # No cache hit — use Haiku for identification
     try:
         response = client.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-sonnet-4-20250514",
             max_tokens=1024,
             system=DISAMBIGUATE_PROMPT,
             messages=[{"role": "user", "content": user_input}],
@@ -740,7 +740,7 @@ def identify_figure():
         def generate_opening(fig_data):
             system_prompt = build_system_prompt(fig_data)
             resp = client.messages.create(
-                model="claude-3-5-haiku-20241022",
+                model="claude-sonnet-4-20250514",
                 max_tokens=512,
                 system=system_prompt,
                 messages=[{"role": "user", "content": "You have just risen from your grave. Introduce yourself."}],
@@ -833,7 +833,7 @@ def start_conversation():
             if not opening_message:
                 # Generate fresh opening with Haiku
                 resp = client.messages.create(
-                    model="claude-3-5-haiku-20241022",
+                    model="claude-sonnet-4-20250514",
                     max_tokens=512,
                     system=system_prompt,
                     messages=[{"role": "user", "content": "You have just risen from your grave. Introduce yourself."}],
@@ -871,7 +871,7 @@ def start_conversation():
         system_prompt = build_system_prompt(figure)
 
         response = client.messages.create(
-            model="claude-3-5-haiku-20241022",
+            model="claude-sonnet-4-20250514",
             max_tokens=512,
             system=system_prompt,
             messages=[
@@ -933,7 +933,7 @@ def chat():
         capped_msgs = all_msgs
 
     response = client.messages.create(
-        model="claude-3-5-haiku-20241022",
+        model="claude-sonnet-4-20250514",
         max_tokens=512,
         system=conv["system_prompt"],
         messages=capped_msgs,
