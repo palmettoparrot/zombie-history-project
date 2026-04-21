@@ -31,53 +31,126 @@ client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 google_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
 
-# ElevenLabs voice mapping — maps gender/region to voice IDs
-# Low stability (0.25-0.35) gives each take a slightly different eerie quality
+# ElevenLabs voice library — 37 pre-made voices available
 ELEVENLABS_VOICES = {
-    "male_default":   "onwK4e9ZLuTAKqWW03F9",   # Daniel — authoritative British
-    "male_deep":      "pNInz6obpgDQGcFmaJgB",   # Adam — deep resonant
-    "male_gruff":     "VR6AewLTigWG4xSOukaG",   # Arnold — gruff, intense
-    "male_hoarse":    "N2lVS1w4EtoT3dr4eOWO",   # Callum — hoarse, weathered
-    "male_narrator":  "nPczCjzI2devNBz1zQrb",   # Brian — narrator, commanding
-    "male_warm":      "ErXwobaYiN019PkySvjV",   # Antoni — warm, European
-    "male_american":  "pqHfZKP75CvOlQylNhV4",   # Bill — deep American
-    "male_casual":    "iP95p4xoKVk53GoZ742B",   # Chris — casual, modern
-    "male_natural":   "IKne3meq5aSn9XLyUdCD",   # Charlie — natural, youthful
-    "female_default": "EXAVITQu4vr4xnSDxMaL",   # Sarah — soft, expressive
-    "female_confident": "Xb7hH8MSUJpSbSDYk0k2", # Alice — confident, clear
-    "female_warm":    "pFZP5JQG7iQjIQuC4Bku",   # Lily — warm British
+    # Male voices
+    "daniel":    "onwK4e9ZLuTAKqWW03F9",   # Authoritative British
+    "adam":      "pNInz6obpgDQGcFmaJgB",   # Deep, resonant
+    "arnold":    "VR6AewLTigWG4xSOukaG",   # Gruff, intense
+    "callum":    "N2lVS1w4EtoT3dr4eOWO",   # Hoarse, weathered
+    "brian":     "nPczCjzI2devNBz1zQrb",   # Narrator, commanding
+    "antoni":    "ErXwobaYiN019PkySvjV",   # Warm, European
+    "bill":      "pqHfZKP75CvOlQylNhV4",   # Deep American
+    "chris":     "iP95p4xoKVk53GoZ742B",   # Casual, modern
+    "charlie":   "IKne3meq5aSn9XLyUdCD",   # Natural, youthful
+    "josh":      "TxGEqnHWrfWFTfGW9XjX",   # Deep, dramatic
+    "sam":       "yoZ06aMxZJJ28mfd3POQ",   # Warm narrator
+    "harry":     "SOYHLrjzK2X1ezoPC6cr",   # Expressive
+    "james":     "ZQe5CZNOzWyzPSCn5a3c",   # Authoritative, deep
+    "jeremy":    "bVMeCyTHy58xNoL34h3p",   # Scholarly, thoughtful
+    "michael":   "flq6f7yk4E4fJM5XTYuZ",   # Warm, natural
+    "george":    "JBFqnCBsd6RMkjVDRZzb",   # Precise, measured
+    "eric":      "cjVigY5qzO86Huf0OWal",   # Mid-range, versatile
+    "roger":     "CwhRBWXzGAHq8TQ4Fs17",   # Older, gravelly
+    "liam":      "TX3LPaxmHKxFdv7VOQHJ",   # Strong, clear
+    "will":      "bIHbv24MWmeRgasZH58o",   # Warm, approachable
+    "river":     "SAz9YHcvj6GT2YYXdXww",   # Smooth, calm
+    # Female voices
+    "sarah":     "EXAVITQu4vr4xnSDxMaL",   # Soft, expressive
+    "alice":     "Xb7hH8MSUJpSbSDYk0k2",   # Confident, clear
+    "lily":      "pFZP5JQG7iQjIQuC4Bku",   # Warm British
+    "rachel":    "21m00Tcm4TlvDq8ikWAM",   # Calm, measured
+    "domi":      "AZnzlk1XvdvUeBnXmlld",   # Strong, assertive
+    "elli":      "MF3mGyEYCl7XYWbV9V6O",   # Clear, younger
+    "dorothy":   "ThT5KcBeYPX3keUQqHPh",   # Deeper, mature
+    "gigi":      "jBpfuIE2acCO8z3wKNLl",   # Light, youthful
+    "matilda":   "XrExE9yKIg1WjnnlVkGX",   # Warm, expressive
+    "freya":     "jsCqWAovK2LkecY7zXl4",   # Clear, Nordic feel
+    "grace":     "oWAxZDx7w5VEj9dCyTzz",   # Warm, elegant
+    "charlotte": "XB0fDUnXU5powFXDhCwa",   # Refined, clear
+    "jessica":   "cgSgspJ2msm6clMCkdW9",   # Warm, natural
+    "glinda":    "z9fAnlkpzviPz146aGWa",   # Unique, expressive
+    "laura":     "FGY2WhTYpPnrIDTdsKH5",   # Warm, natural
+    "aria":      "g5CIjZEefAph4nQFvHAz",   # Musical, clear
 }
 
-# Region-to-voice mapping — picks the best-fitting voice per character origin
+# Region-to-voice mapping + per-region voice settings
+# Each region maps to: voice IDs AND voice_settings overrides
+# Stability: lower = more dramatic/guttural, higher = more measured
+# Style: higher = more expressive/emotional
 REGION_ELEVENLABS = {
-    # European
-    "british":      {"male": "male_default",    "female": "female_warm"},
-    "french":       {"male": "male_warm",       "female": "female_warm"},
-    "italian":      {"male": "male_warm",       "female": "female_warm"},
-    "spanish":      {"male": "male_warm",       "female": "female_confident"},
-    "german":       {"male": "male_narrator",   "female": "female_confident"},
-    "scandinavian": {"male": "male_deep",       "female": "female_confident"},
-    "russian":      {"male": "male_deep",       "female": "female_confident"},
-    "greek":        {"male": "male_default",    "female": "female_warm"},
-    "irish":        {"male": "male_natural",    "female": "female_warm"},
-    "scottish":     {"male": "male_hoarse",     "female": "female_warm"},
-    # Asian
-    "japanese":     {"male": "male_default",    "female": "female_default"},
-    "chinese":      {"male": "male_narrator",   "female": "female_default"},
-    "korean":       {"male": "male_default",    "female": "female_default"},
-    "mongolian":    {"male": "male_gruff",      "female": "female_confident"},
-    "indian":       {"male": "male_warm",       "female": "female_warm"},
-    "persian":      {"male": "male_deep",       "female": "female_warm"},
-    "turkish":      {"male": "male_deep",       "female": "female_confident"},
-    # African / Middle Eastern / Egyptian
-    "arabic":       {"male": "male_deep",       "female": "female_confident"},
-    "egyptian":     {"male": "male_narrator",   "female": "female_confident"},
-    "african":      {"male": "male_deep",       "female": "female_confident"},
-    # Americas / Pacific
-    "american":     {"male": "male_american",   "female": "female_confident"},
-    "mesoamerican": {"male": "male_hoarse",     "female": "female_default"},
-    "caribbean":    {"male": "male_casual",     "female": "female_confident"},
-    "aboriginal-australian": {"male": "male_gruff", "female": "female_default"},
+    # --- Middle Eastern / North African (Afro-Asiatic & Semitic languages) ---
+    # Deep, resonant, dramatic delivery — these cultures had guttural languages
+    "egyptian":  {"male": "josh",    "female": "domi",
+                  "settings": {"stability": 0.20, "similarity_boost": 0.65, "style": 0.50}},
+    "arabic":    {"male": "adam",    "female": "domi",
+                  "settings": {"stability": 0.20, "similarity_boost": 0.65, "style": 0.50}},
+    "persian":   {"male": "josh",    "female": "dorothy",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.70, "style": 0.45}},
+    "turkish":   {"male": "adam",    "female": "charlotte",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.70, "style": 0.45}},
+
+    # --- African ---
+    # Deep, powerful, resonant
+    "african":   {"male": "james",   "female": "grace",
+                  "settings": {"stability": 0.22, "similarity_boost": 0.65, "style": 0.45}},
+
+    # --- South Asian ---
+    # Warm, expressive
+    "indian":    {"male": "sam",     "female": "aria",
+                  "settings": {"stability": 0.28, "similarity_boost": 0.70, "style": 0.40}},
+
+    # --- East Asian ---
+    # Measured, deliberate, controlled
+    "japanese":  {"male": "george",  "female": "elli",
+                  "settings": {"stability": 0.42, "similarity_boost": 0.80, "style": 0.20}},
+    "chinese":   {"male": "eric",    "female": "aria",
+                  "settings": {"stability": 0.40, "similarity_boost": 0.80, "style": 0.22}},
+    "korean":    {"male": "george",  "female": "elli",
+                  "settings": {"stability": 0.40, "similarity_boost": 0.80, "style": 0.22}},
+
+    # --- Central Asian / Steppe ---
+    # Intense, commanding, guttural
+    "mongolian": {"male": "arnold",  "female": "domi",
+                  "settings": {"stability": 0.18, "similarity_boost": 0.60, "style": 0.55}},
+
+    # --- Mediterranean / Southern European ---
+    # Warm, passionate, expressive
+    "greek":     {"male": "antoni",  "female": "rachel",
+                  "settings": {"stability": 0.28, "similarity_boost": 0.70, "style": 0.40}},
+    "italian":   {"male": "antoni",  "female": "charlotte",
+                  "settings": {"stability": 0.28, "similarity_boost": 0.70, "style": 0.42}},
+    "spanish":   {"male": "liam",    "female": "jessica",
+                  "settings": {"stability": 0.28, "similarity_boost": 0.70, "style": 0.42}},
+    "french":    {"male": "antoni",  "female": "matilda",
+                  "settings": {"stability": 0.30, "similarity_boost": 0.72, "style": 0.38}},
+
+    # --- Northern European ---
+    # More measured, authoritative
+    "british":   {"male": "daniel",  "female": "lily",
+                  "settings": {"stability": 0.32, "similarity_boost": 0.75, "style": 0.30}},
+    "irish":     {"male": "charlie", "female": "grace",
+                  "settings": {"stability": 0.30, "similarity_boost": 0.72, "style": 0.35}},
+    "scottish":  {"male": "callum",  "female": "freya",
+                  "settings": {"stability": 0.28, "similarity_boost": 0.70, "style": 0.35}},
+    "german":    {"male": "roger",   "female": "alice",
+                  "settings": {"stability": 0.35, "similarity_boost": 0.78, "style": 0.28}},
+    "scandinavian": {"male": "brian", "female": "freya",
+                  "settings": {"stability": 0.35, "similarity_boost": 0.78, "style": 0.25}},
+    "russian":   {"male": "james",   "female": "alice",
+                  "settings": {"stability": 0.25, "similarity_boost": 0.68, "style": 0.40}},
+
+    # --- Americas ---
+    "american":  {"male": "bill",    "female": "laura",
+                  "settings": {"stability": 0.30, "similarity_boost": 0.75, "style": 0.35}},
+    "mesoamerican": {"male": "josh", "female": "dorothy",
+                  "settings": {"stability": 0.20, "similarity_boost": 0.62, "style": 0.48}},
+    "caribbean": {"male": "chris",   "female": "jessica",
+                  "settings": {"stability": 0.26, "similarity_boost": 0.68, "style": 0.42}},
+
+    # --- Pacific ---
+    "aboriginal-australian": {"male": "roger", "female": "dorothy",
+                  "settings": {"stability": 0.18, "similarity_boost": 0.60, "style": 0.50}},
 }
 
 DATABASE = os.path.join(os.path.dirname(__file__), "conversations.db")
@@ -1063,10 +1136,21 @@ def speak():
     if not clean_text or clean_text == '...':
         return jsonify({"error": "No dialogue to speak"}), 400
 
-    # Select voice based on region and gender
+    # Select voice and settings based on region and gender
     region_map = REGION_ELEVENLABS.get(region, REGION_ELEVENLABS.get("british"))
-    voice_key = region_map.get(gender, region_map.get("male", "male_default"))
-    voice_id = ELEVENLABS_VOICES.get(voice_key, ELEVENLABS_VOICES["male_default"])
+    voice_key = region_map.get(gender, region_map.get("male", "daniel"))
+    voice_id = ELEVENLABS_VOICES.get(voice_key, ELEVENLABS_VOICES["daniel"])
+
+    # Per-region voice settings — changes how dramatic/measured the delivery is
+    region_settings = region_map.get("settings", {})
+    voice_settings = {
+        "stability": region_settings.get("stability", 0.30),
+        "similarity_boost": region_settings.get("similarity_boost", 0.75),
+        "style": region_settings.get("style", 0.35),
+        "use_speaker_boost": True,
+    }
+
+    print(f"TTS: {region}/{gender} → {voice_key} (stability={voice_settings['stability']}, style={voice_settings['style']})")
 
     try:
         response = requests.post(
@@ -1079,12 +1163,7 @@ def speak():
             json={
                 "text": clean_text,
                 "model_id": "eleven_multilingual_v2",
-                "voice_settings": {
-                    "stability": 0.30,          # Low = eerie variation between takes
-                    "similarity_boost": 0.75,    # Keep recognizable but allow eeriness
-                    "style": 0.35,               # Moderate expressiveness
-                    "use_speaker_boost": True,
-                },
+                "voice_settings": voice_settings,
             },
             timeout=15,
         )
