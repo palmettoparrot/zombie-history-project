@@ -341,20 +341,21 @@ Describe what this person looked like ALIVE. This is the most important part. Be
   d) CLOTHING: Accurate to their era and station, but now centuries old — faded, frayed, moth-eaten, dirt-stained.
   e) TEETH: Pre-sugar cultures (before 1600s): worn and chipped but not rotten. Post-sugar Europe (1600s+): missing and blackened teeth, especially the wealthy who could afford sugar.
 
-STEP 2 — ADD ZOMBIE DECAY (write this second, layered HEAVILY on top):
-This person has been DEAD AND BURIED FOR CENTURIES. They must look unmistakably like a reanimated corpse. This is the most important visual element — if they look like a living person with scratches, you have FAILED.
+STEP 2 — ADD UNDEAD TRANSFORMATION (write this second, layered on top):
+This person has been dead for centuries and has risen from the grave. They must look unmistakably UNDEAD — not a living person with dirt on them.
+
+IMPORTANT: Use image-generation-safe language. Describe them as "undead", "ancient", "skeletal", "withered" — avoid graphic medical/gore terms.
 
 REQUIRED undead features — include ALL of these:
-  a) SKIN: Pallid grayish-green or ashen grey. Dried, papery, pulled tight over bones in some areas, rotting and peeling away in others. NOT healthy skin with a color tint — this is DEAD tissue.
-  b) FACE: Gaunt, hollow cheeks. Sunken dark eye sockets with milky or clouded eyes. Visible cheekbone or jawbone where flesh has rotted away. Cracked, dried lips pulled back from teeth.
-  c) BODY: Emaciated and withered — NO healthy muscle tone, no matter what they looked like alive. Ribs may show, arms are thin and bony, hands are skeletal with dried sinew. Centuries in a grave strip away all flesh and fat.
-  d) SPECIFIC DECAY: At least one area of significant decay — exposed bone at the temple, a hole in the cheek showing teeth, fingers reduced to bone, a section of skull visible through patchy remaining hair. This is what separates a zombie from a dirty living person.
-  e) TEXTURE: Dried earth, cobwebs, grave dust clinging to them. They just clawed their way out of the ground.
+  a) SKIN: Mottled grayish-green or ashen grey, weathered and ancient-looking. Stretched tight over the skull and bones. NOT healthy skin with a tint — this should look like parchment or ancient leather.
+  b) FACE: Deeply gaunt and hollow-cheeked. Dark sunken eye sockets with eerie pale or glowing eyes. Skeletal features showing through — prominent cheekbones, jawline, brow ridge. Thin cracked lips.
+  c) BODY: Gaunt and skeletal — no healthy muscle tone. Thin wiry frame, bony hands and fingers, visible collarbones and skeletal structure through the skin. Think ancient mummy, not athlete.
+  d) AGING: Wisps of remaining hair (grey, thin, patchy). Weathered ancient texture to all skin. Cobwebs, grave dust, dried earth clinging to them.
 
-The overall impression should be: "That is clearly a DEAD PERSON who is somehow standing and looking at me." Think skeletal pirate from Pirates of the Caribbean, not an action hero with face paint.
+The overall look: Captain Barbossa's cursed crew in Pirates of the Caribbean — clearly supernatural undead beings, skeletal and eerie, but with enough character to be expressive. NOT a living person with makeup.
 
 STEP 3 — MOOD AND FRAMING:
-Dark atmospheric background, fog, dramatic side lighting. Portrait framing — head and upper torso. Cinematic, photorealistic horror portrait. The lighting should emphasize the decay — harsh shadows in the hollow eye sockets and cheekbones.
+Dark atmospheric background, fog, dramatic side lighting. Portrait framing — head and upper torso. Cinematic photorealistic fantasy portrait. Harsh shadows emphasizing the gaunt skeletal features.
 
 Respond in this exact JSON format:
 {
@@ -367,7 +368,7 @@ Respond in this exact JSON format:
     "confirmation_message": "A message to confirm with the user, e.g., 'So you wish to awaken Julius Caesar, the great dictator of Rome who fell to assassins' blades in 44 BC?'",
     "voice_gender": "male or female",
     "voice_region": "The person's ACTUAL cultural/linguistic origin. Be specific. Use one of: japanese, chinese, korean, mongolian, arabic, egyptian, greek, indian, persian, turkish, french, italian, spanish, german, scandinavian, british, irish, scottish, russian, african, mesoamerican, aboriginal-australian, caribbean, american. Pick the one that matches their native language and culture — NOT where they ruled, but where they or their ancestors were FROM. Cleopatra would be 'greek' (Macedonian descent). Genghis Khan would be 'mongolian'. Oda Nobunaga would be 'japanese'. A Mayan priest would be 'mesoamerican'. Ashoka would be 'indian'.",
-    "image_prompt": "A cinematic zombie portrait description. Example: 'A reanimated corpse of a middle-aged Roman man. Ashen grey-green skin, dried and papery, pulled tight over a gaunt emaciated face. Hollow sunken eye sockets with milky clouded eyes, cheekbone exposed where flesh has rotted away, cracked dried lips pulled back from worn teeth. Thin bony frame with no muscle tone — centuries of death have withered everything. He wears a tattered, dirt-stained, moth-eaten white toga. Grave dust and cobwebs cling to him. Dark atmospheric background with fog, harsh dramatic side lighting emphasizing the hollows and decay. Photorealistic cinematic horror portrait.'"
+    "image_prompt": "A cinematic undead portrait. Use SAFE language — describe as undead/skeletal/ancient/withered, avoid graphic gore terms. Example: 'An ancient undead Roman man risen from the grave. Gaunt skeletal face with mottled grey-green parchment-like skin stretched tight over prominent cheekbones and jaw. Dark hollow eye sockets with eerie pale glowing eyes. Thin cracked lips, patchy grey hair. Emaciated bony frame, skeletal hands with long thin fingers. Tattered moth-eaten dirt-stained white toga, cobwebs and grave dust clinging to him. Dark atmospheric background with fog, dramatic side lighting. Cinematic photorealistic fantasy portrait.'"
 }"""
 
 ZOMBIE_SYSTEM_PROMPT = """You are {name}, a zombie who has risen from the dead. You lived in {location} during {era}.
@@ -433,13 +434,12 @@ def get_image_url(prompt):
 
         styled_prompt = (
             f"{prompt}\n\n"
-            f"Render this person as an undead zombie in the style of Pirates of the Caribbean — "
-            f"moderate decay, creepy but with personality and dark humor. Not pure horror. "
-            f"The ethnicity, body type, and clothing described above are the MOST important things to get right. "
-            f"Zombie decay should be uniform across face, hands, and body. "
-            f"Gaunt, withered, mottled grayish-green skin, some exposed bone. "
-            f"Worn and tattered clothing. Dark foggy background, dramatic lighting. "
-            f"Cinematic photorealistic portrait. No text in the image."
+            f"Style: Ancient undead fantasy character in the style of Pirates of the Caribbean cursed pirates. "
+            f"Gaunt skeletal frame, mottled grey-green parchment skin, dark hollow eye sockets, "
+            f"prominent bones visible through weathered skin. NO healthy muscle tone — thin and emaciated. "
+            f"The ethnicity, facial features, and clothing described above are the MOST important things to get right. "
+            f"Tattered ancient clothing, cobwebs, grave dust. Dark foggy background, dramatic lighting. "
+            f"Cinematic photorealistic fantasy portrait. No text in the image."
         )
 
         # Imagen has a prompt length limit — truncate if needed
