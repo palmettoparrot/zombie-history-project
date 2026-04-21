@@ -219,6 +219,10 @@ DATABASE = os.path.join(os.path.dirname(__file__), "conversations.db")
 GENERATED_IMAGES_DIR = os.path.join(os.path.dirname(__file__), "static", "generated")
 os.makedirs(GENERATED_IMAGES_DIR, exist_ok=True)
 
+# Fallback image shown when Imagen fails or is blocked by safety filter.
+# This URL must NEVER be saved to the prefab cache as a real image.
+FALLBACK_IMAGE_URL = "/static/images/loading-zombie.jpg"
+
 # In-memory cache for active conversations (fast access during chat)
 conversations = {}
 
@@ -393,10 +397,21 @@ def get_all_conversations(user_id=None):
 
 # ===== PREFAB FIGURE CACHE =====
 def get_prefab(slug):
-    """Look up a pre-built figure by slug (lowercase name)."""
+    """Look up a pre-built figure by slug (lowercase name).
+
+    Auto-heals corrupted entries: if the cached image_url is the fallback
+    (meaning image generation failed previously), delete the row and return
+    None so the next request will regenerate it properly.
+    """
     db = get_db()
     row = db.execute("SELECT * FROM prefab_figures WHERE slug = ?", (slug,)).fetchone()
     if row:
+        # Auto-heal: discard cache entries that have the fallback image
+        if row["image_url"] == FALLBACK_IMAGE_URL or not row["image_url"]:
+            db.execute("DELETE FROM prefab_figures WHERE slug = ?", (slug,))
+            db.commit()
+            print(f"Auto-healed corrupted prefab: {slug} (had fallback image)")
+            return None
         return {
             "figure_data": json.loads(row["figure_data"]),
             "image_url": row["image_url"],
@@ -632,12 +647,12 @@ def get_image_url(prompt):
             return url
         else:
             print(f"Imagen 4 returned no images — likely safety filter. Prompt: {prompt[:100]}...")
-            return "/static/images/loading-zombie.jpg"
+            return None
 
     except Exception as e:
         print(f"Image generation failed: {e}")
         traceback.print_exc()
-        return "/static/images/loading-zombie.jpg"
+        return None
 
 
 # ===== SHARED FIGURE BUILDER =====
@@ -662,6 +677,12 @@ def build_figure(name, location, era, num_openings=3, use_app_context=False):
     # Generate image
     image_prompt = figure_data.get("image_prompt", "")
     image_url = get_image_url(image_prompt)
+
+    # If image generation failed, don't save this to the prefab cache —
+    # we want it to retry on the next request instead of being stuck with
+    # the fallback image forever.
+    if not image_url:
+        raise Exception(f"Image generation failed for {figure_data.get('name', 'Unknown')} — not caching")
 
     # Build system prompt
     system_prompt = build_system_prompt(figure_data)
@@ -974,7 +995,12 @@ def identify_figure():
             """After image and opening are ready, save as prefab for future users."""
             try:
                 time.sleep(2)  # Give image time to generate
-                img_url = pending_images[fig_key].result(timeout=60) if fig_key in pending_images else ""
+                img_url = pending_images[fig_key].result(timeout=60) if fig_key in pending_images else None
+
+                # Don't cache if image generation failed — we want it to retry next time
+                if not img_url:
+                    print(f"Not caching {fig_data.get('name', 'Unknown')} — image failed")
+                    return
 
                 sys_prompt = ""
                 opening = ""
@@ -1020,7 +1046,9 @@ def get_image():
         if future.done():
             url = future.result()
             del pending_images[figure_key]
-            return jsonify({"status": "ready", "image_url": url})
+            # If generation failed (None), serve the fallback for display only.
+            # The prefab cache won't have saved this, so next request retries.
+            return jsonify({"status": "ready", "image_url": url or FALLBACK_IMAGE_URL})
         else:
             return jsonify({"status": "pending"})
 
@@ -1351,6 +1379,25 @@ def prebuild_figures():
 
 # Always initialize DB (works with both gunicorn and direct python run)
 init_db()
+
+
+# Clean up corrupted prefabs on startup (entries saved with the fallback image)
+def cleanup_corrupted_prefabs():
+    try:
+        db = sqlite3.connect(DATABASE)
+        cur = db.execute(
+            "DELETE FROM prefab_figures WHERE image_url = ? OR image_url IS NULL OR image_url = ''",
+            (FALLBACK_IMAGE_URL,)
+        )
+        removed = cur.rowcount
+        db.commit()
+        db.close()
+        if removed:
+            print(f"Startup cleanup: removed {removed} prefab(s) with fallback/empty image.")
+    except Exception as e:
+        print(f"Cleanup error: {e}")
+
+cleanup_corrupted_prefabs()
 
 
 # ===== AUTO-PREBUILD ON STARTUP =====
