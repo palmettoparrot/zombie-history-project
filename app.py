@@ -1314,7 +1314,9 @@ def speak():
             },
             json={
                 "text": clean_text,
-                "model_id": "eleven_multilingual_v2",
+                # Turbo model — ~2-4s faster per response than multilingual_v2,
+                # slight quality tradeoff. Works with all our custom voices.
+                "model_id": "eleven_turbo_v2_5",
                 "voice_settings": voice_settings,
             },
             timeout=15,

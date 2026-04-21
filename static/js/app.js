@@ -34,8 +34,9 @@ let zombieAudioContext = null;    // Shared AudioContext
 let zombieVoiceEnabled = true;    // User can toggle voice on/off
 
 // Universal zombie audio effect: slower playback = lower pitch + slower speech
-// 0.9 = roughly -1.5 semitones + 10% slower. Feels undead without being unintelligible.
-const ZOMBIE_PLAYBACK_RATE = 0.9;
+// 0.925 = roughly -1.1 semitones + 7.5% slower.
+// (Previously 0.9; reduced by 25% of the slowdown for faster engagement.)
+const ZOMBIE_PLAYBACK_RATE = 0.925;
 
 // Role-based reverb — the acoustic space this character's voice is placed in.
 // decay = seconds of reverb tail; wet = how much reverb vs dry signal (0-1)
