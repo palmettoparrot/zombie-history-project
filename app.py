@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import random
 import sqlite3
@@ -13,7 +14,7 @@ import requests
 import anthropic
 from google import genai
 from google.genai import types
-from flask import Flask, render_template, request, jsonify, session, g
+from flask import Flask, render_template, request, jsonify, session, g, Response
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
@@ -28,6 +29,56 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"  # Basic CSRF protection
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 google_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
+
+# ElevenLabs voice mapping — maps gender/region to voice IDs
+# Low stability (0.25-0.35) gives each take a slightly different eerie quality
+ELEVENLABS_VOICES = {
+    "male_default":   "onwK4e9ZLuTAKqWW03F9",   # Daniel — authoritative British
+    "male_deep":      "pNInz6obpgDQGcFmaJgB",   # Adam — deep resonant
+    "male_gruff":     "VR6AewLTigWG4xSOukaG",   # Arnold — gruff, intense
+    "male_hoarse":    "N2lVS1w4EtoT3dr4eOWO",   # Callum — hoarse, weathered
+    "male_narrator":  "nPczCjzI2devNBz1zQrb",   # Brian — narrator, commanding
+    "male_warm":      "ErXwobaYiN019PkySvjV",   # Antoni — warm, European
+    "male_american":  "pqHfZKP75CvOlQylNhV4",   # Bill — deep American
+    "male_casual":    "iP95p4xoKVk53GoZ742B",   # Chris — casual, modern
+    "male_natural":   "IKne3meq5aSn9XLyUdCD",   # Charlie — natural, youthful
+    "female_default": "EXAVITQu4vr4xnSDxMaL",   # Sarah — soft, expressive
+    "female_confident": "Xb7hH8MSUJpSbSDYk0k2", # Alice — confident, clear
+    "female_warm":    "pFZP5JQG7iQjIQuC4Bku",   # Lily — warm British
+}
+
+# Region-to-voice mapping — picks the best-fitting voice per character origin
+REGION_ELEVENLABS = {
+    # European
+    "british":      {"male": "male_default",    "female": "female_warm"},
+    "french":       {"male": "male_warm",       "female": "female_warm"},
+    "italian":      {"male": "male_warm",       "female": "female_warm"},
+    "spanish":      {"male": "male_warm",       "female": "female_confident"},
+    "german":       {"male": "male_narrator",   "female": "female_confident"},
+    "scandinavian": {"male": "male_deep",       "female": "female_confident"},
+    "russian":      {"male": "male_deep",       "female": "female_confident"},
+    "greek":        {"male": "male_default",    "female": "female_warm"},
+    "irish":        {"male": "male_natural",    "female": "female_warm"},
+    "scottish":     {"male": "male_hoarse",     "female": "female_warm"},
+    # Asian
+    "japanese":     {"male": "male_default",    "female": "female_default"},
+    "chinese":      {"male": "male_narrator",   "female": "female_default"},
+    "korean":       {"male": "male_default",    "female": "female_default"},
+    "mongolian":    {"male": "male_gruff",      "female": "female_confident"},
+    "indian":       {"male": "male_warm",       "female": "female_warm"},
+    "persian":      {"male": "male_deep",       "female": "female_warm"},
+    "turkish":      {"male": "male_deep",       "female": "female_confident"},
+    # African / Middle Eastern / Egyptian
+    "arabic":       {"male": "male_deep",       "female": "female_confident"},
+    "egyptian":     {"male": "male_narrator",   "female": "female_confident"},
+    "african":      {"male": "male_deep",       "female": "female_confident"},
+    # Americas / Pacific
+    "american":     {"male": "male_american",   "female": "female_confident"},
+    "mesoamerican": {"male": "male_hoarse",     "female": "female_default"},
+    "caribbean":    {"male": "male_casual",     "female": "female_confident"},
+    "aboriginal-australian": {"male": "male_gruff", "female": "female_default"},
+}
 
 DATABASE = os.path.join(os.path.dirname(__file__), "conversations.db")
 
@@ -983,6 +1034,69 @@ def resume_conversation(session_id):
         "figure": figure,
         "messages": chat_messages,
     })
+
+
+@app.route("/api/speak", methods=["POST"])
+def speak():
+    """Convert text to speech using ElevenLabs API. Returns MP3 audio."""
+    if not ELEVENLABS_API_KEY:
+        return jsonify({"error": "Voice service not configured"}), 503
+
+    data = request.json or {}
+    text = data.get("text", "").strip()
+    gender = data.get("gender", "male").lower()
+    region = data.get("region", "british").lower()
+
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+
+    # Strip action text (*between asterisks*) — only speak dialogue
+    clean_text = re.sub(r'\*[^*]+\*', '...', text).strip()
+    if not clean_text or clean_text == '...':
+        return jsonify({"error": "No dialogue to speak"}), 400
+
+    # Select voice based on region and gender
+    region_map = REGION_ELEVENLABS.get(region, REGION_ELEVENLABS.get("british"))
+    voice_key = region_map.get(gender, region_map.get("male", "male_default"))
+    voice_id = ELEVENLABS_VOICES.get(voice_key, ELEVENLABS_VOICES["male_default"])
+
+    try:
+        response = requests.post(
+            f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+            headers={
+                "xi-api-key": ELEVENLABS_API_KEY,
+                "Content-Type": "application/json",
+                "Accept": "audio/mpeg",
+            },
+            json={
+                "text": clean_text,
+                "model_id": "eleven_multilingual_v2",
+                "voice_settings": {
+                    "stability": 0.30,          # Low = eerie variation between takes
+                    "similarity_boost": 0.75,    # Keep recognizable but allow eeriness
+                    "style": 0.35,               # Moderate expressiveness
+                    "use_speaker_boost": True,
+                },
+            },
+            timeout=15,
+        )
+
+        if response.status_code != 200:
+            print(f"ElevenLabs error {response.status_code}: {response.text[:200]}")
+            return jsonify({"error": "Voice generation failed"}), 502
+
+        # Return the MP3 audio directly
+        return Response(
+            response.content,
+            mimetype="audio/mpeg",
+            headers={"Cache-Control": "no-store"},
+        )
+
+    except requests.Timeout:
+        return jsonify({"error": "Voice service timeout"}), 504
+    except Exception as e:
+        print(f"ElevenLabs exception: {e}")
+        return jsonify({"error": "Voice service error"}), 500
 
 
 @app.route("/api/end_conversation", methods=["POST"])

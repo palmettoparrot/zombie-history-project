@@ -28,181 +28,82 @@ const searchInput = document.getElementById('search-input');
 const searchBtn = document.getElementById('search-btn');
 const typingIndicator = document.getElementById('typing-indicator');
 
-// ===== ZOMBIE VOICE (Text-to-Speech) =====
-let zombieVoice = null;
+// ===== ZOMBIE VOICE (ElevenLabs Text-to-Speech) =====
+let currentZombieAudio = null;   // Currently playing Audio object
+let zombieVoiceEnabled = true;   // User can toggle voice on/off
 
-// Voice mapping — ENGLISH VOICES ONLY. Non-English voices can't speak English properly.
-// We use different English dialects (UK, US, Australian, Indian, Irish, South African)
-// and vary pitch/rate per region to differentiate characters.
-//
-// Available English dialects in most browsers:
-//   en-GB (British), en-US (American), en-AU (Australian),
-//   en-IN (Indian English), en-IE (Irish), en-ZA (South African)
-//
-// Strategy: map each region to the English dialect that sounds most distinct/appropriate,
-// plus pitch/rate tweaks to further differentiate.
+async function speakZombie(text) {
+    if (!zombieVoiceEnabled) return;
 
-const REGION_VOICE_MAP = {
-    // --- Regions with a natural English dialect match ---
-    british:    { male: ['Daniel', 'Google UK English Male', 'en-GB'],
-                  female: ['Martha', 'Kate', 'Google UK English Female', 'en-GB'] },
-    irish:      { male: ['Moira', 'en-IE', 'Daniel', 'en-GB'],
-                  female: ['Moira', 'en-IE', 'Martha', 'en-GB'] },
-    scottish:   { male: ['Fiona', 'en-GB', 'Daniel'],
-                  female: ['Fiona', 'en-GB', 'Martha'] },
-    american:   { male: ['Alex', 'Fred', 'Google US English', 'en-US'],
-                  female: ['Samantha', 'Allison', 'Ava', 'Google US English', 'en-US'] },
-    'aboriginal-australian': { male: ['Gordon', 'Lee', 'en-AU', 'Daniel', 'Google UK English Male'],
-                               female: ['Karen', 'en-AU', 'Google UK English Female'] },
-    caribbean:  { male: ['en-GB', 'Daniel', 'Google UK English Male'],
-                  female: ['en-GB', 'Martha', 'Google UK English Female'] },
-    indian:     { male: ['Rishi', 'en-IN', 'Google UK English Male'],
-                  female: ['Lekha', 'Veena', 'en-IN', 'Google UK English Female'] },
-    african:    { male: ['en-ZA', 'Daniel', 'Arthur', 'Fred'],
-                  female: ['Tessa', 'en-ZA', 'Martha'] },
+    // Stop any currently playing zombie speech
+    stopZombieSpeech();
 
-    // --- Non-English regions: use the most distinct-sounding English voice available ---
-    // Indian English is the most "non-Western" English accent available, good for nearby regions
-    arabic:     { male: ['Rishi', 'en-IN', 'Daniel', 'en-GB'],
-                  female: ['Lekha', 'en-IN', 'Martha', 'en-GB'] },
-    egyptian:   { male: ['Rishi', 'en-IN', 'Daniel', 'en-GB'],
-                  female: ['Lekha', 'en-IN', 'Martha', 'en-GB'] },
-    persian:    { male: ['Rishi', 'en-IN', 'Daniel', 'en-GB'],
-                  female: ['Lekha', 'en-IN', 'Martha', 'en-GB'] },
-    turkish:    { male: ['Rishi', 'en-IN', 'Daniel', 'en-GB'],
-                  female: ['Lekha', 'en-IN', 'Martha', 'en-GB'] },
-    greek:      { male: ['Daniel', 'en-GB', 'Google UK English Male'],
-                  female: ['Martha', 'en-GB', 'Google UK English Female'] },
-
-    // East Asian — use Australian English (most distinct from British/American)
-    japanese:   { male: ['Gordon', 'Lee', 'en-AU', 'Daniel', 'Fred'],
-                  female: ['Karen', 'en-AU', 'Martha'] },
-    chinese:    { male: ['Gordon', 'Lee', 'en-AU', 'Daniel', 'Fred'],
-                  female: ['Karen', 'en-AU', 'Martha'] },
-    korean:     { male: ['Gordon', 'Lee', 'en-AU', 'Daniel', 'Fred'],
-                  female: ['Karen', 'en-AU', 'Martha'] },
-    mongolian:  { male: ['Gordon', 'Lee', 'en-AU', 'Daniel', 'Fred'],
-                  female: ['Karen', 'en-AU', 'Martha'] },
-
-    // European — use British English (closest culturally)
-    french:     { male: ['Daniel', 'en-GB', 'Google UK English Male'],
-                  female: ['Martha', 'Kate', 'en-GB', 'Google UK English Female'] },
-    italian:    { male: ['Daniel', 'en-GB', 'Google UK English Male'],
-                  female: ['Martha', 'en-GB', 'Google UK English Female'] },
-    spanish:    { male: ['Daniel', 'en-GB', 'Google US English', 'en-US'],
-                  female: ['Martha', 'en-GB', 'Samantha', 'en-US'] },
-    german:     { male: ['Daniel', 'en-GB', 'Google UK English Male'],
-                  female: ['Martha', 'en-GB', 'Google UK English Female'] },
-    scandinavian: { male: ['Daniel', 'en-GB', 'Google UK English Male'],
-                    female: ['Martha', 'en-GB', 'Google UK English Female'] },
-    russian:    { male: ['Daniel', 'en-GB', 'Google UK English Male'],
-                  female: ['Martha', 'en-GB', 'Google UK English Female'] },
-
-    // Americas
-    mesoamerican: { male: ['Google US English', 'Alex', 'en-US'],
-                    female: ['Samantha', 'Google US English', 'en-US'] },
-};
-
-// Known voice genders for macOS/Chrome — used to avoid gender mismatches on fallback
-const KNOWN_FEMALE_NAMES = ['karen', 'samantha', 'allison', 'ava', 'martha', 'kate', 'moira', 'fiona', 'lekha', 'veena', 'tessa', 'victoria', 'zoe', 'nicky', 'serena', 'catherine', 'kathy', 'flo', 'grandma', 'shelley', 'sandy', 'female'];
-const KNOWN_MALE_NAMES = ['daniel', 'alex', 'fred', 'lee', 'rishi', 'gordon', 'tom', 'oliver', 'aaron', 'ralph', 'arthur', 'albert', 'reed', 'rocko', 'eddy', 'grandpa', 'junior', 'male'];
-
-function voiceMatchesGender(voice, wantGender) {
-    const name = voice.name.toLowerCase();
-    if (wantGender === 'female') {
-        // Accept if it's known female, or at least not known male
-        if (KNOWN_MALE_NAMES.some(m => name.includes(m))) return false;
-        return true;
-    } else {
-        // Accept if it's known male, or at least not known female
-        if (KNOWN_FEMALE_NAMES.some(f => name.includes(f))) return false;
-        return true;
-    }
-}
-
-// Per-region voice adjustments — pitch and rate overrides to give cultural character
-// These layer ON TOP of the base zombie pitch (0.35 male, 0.55 female)
-const REGION_VOICE_TWEAKS = {
-    'aboriginal-australian': { pitchOffset: -0.10, rate: 0.72 },  // deeper, slower, more gravitas
-    mongolian:   { pitchOffset: -0.08, rate: 0.75 },  // deep and commanding
-    japanese:    { pitchOffset: 0, rate: 0.78 },       // measured, deliberate
-    chinese:     { pitchOffset: 0, rate: 0.78 },
-    arabic:      { pitchOffset: -0.05, rate: 0.78 },   // deeper
-    egyptian:    { pitchOffset: -0.05, rate: 0.76 },
-    persian:     { pitchOffset: -0.03, rate: 0.78 },
-    african:     { pitchOffset: -0.08, rate: 0.74 },   // deep, resonant
-    mesoamerican:{ pitchOffset: -0.05, rate: 0.76 },
-    indian:      { pitchOffset: 0, rate: 0.80 },
-    caribbean:   { pitchOffset: -0.05, rate: 0.76 },
-    russian:     { pitchOffset: -0.05, rate: 0.78 },
-    scandinavian:{ pitchOffset: -0.03, rate: 0.78 },
-};
-
-function selectZombieVoice(gender, region) {
-    const synth = window.speechSynthesis;
-    const voices = synth.getVoices();
-    if (!voices.length) return;
-
-    // Only consider English voices
-    const englishVoices = voices.filter(v => v.lang.startsWith('en'));
-    if (!englishVoices.length) {
-        zombieVoice = voices[0];
-        return;
-    }
-
-    const g = (gender || 'male').toLowerCase();
-    const r = (region || 'british').toLowerCase();
-
-    const regionMap = REGION_VOICE_MAP[r];
-    const prefs = regionMap ? (regionMap[g] || regionMap['male']) : null;
-
-    if (prefs) {
-        for (const pref of prefs) {
-            // Try as voice name fragment — must match gender
-            let match = englishVoices.find(v => v.name.includes(pref) && voiceMatchesGender(v, g));
-            if (match) {
-                zombieVoice = match;
-                console.log(`Zombie voice: ${match.name} (matched "${pref}" for ${r}/${g})`);
-                return;
-            }
-            // Try as language code prefix — MUST match gender
-            match = englishVoices.find(v => v.lang.startsWith(pref) && voiceMatchesGender(v, g));
-            if (match) {
-                zombieVoice = match;
-                console.log(`Zombie voice: ${match.name} (lang "${pref}" for ${r}/${g})`);
-                return;
-            }
-        }
-    }
-
-    // Fallback: any English voice matching the right gender
-    let fallback = englishVoices.find(v => voiceMatchesGender(v, g));
-    zombieVoice = fallback || englishVoices[0];
-    console.log(`Zombie voice fallback: ${zombieVoice.name}`);
-}
-
-function speakZombie(text) {
-    // Strip action text between asterisks — don't read stage directions aloud
-    const cleanText = text.replace(/\*[^*]+\*/g, '... ');
-
-    const synth = window.speechSynthesis;
-    synth.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-
-    // Zombie-ify the voice: lower pitch, slightly slow
     const gender = (currentFigure?.voice_gender || 'male').toLowerCase();
     const region = (currentFigure?.voice_region || 'british').toLowerCase();
-    const tweaks = REGION_VOICE_TWEAKS[region] || {};
 
-    let basePitch = gender === 'female' ? 0.7 : 0.35;
-    utterance.pitch = Math.max(0.01, basePitch + (tweaks.pitchOffset || 0));
-    utterance.rate = tweaks.rate || 0.82;
+    try {
+        const response = await fetch('/api/speak', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, gender, region }),
+        });
+
+        if (!response.ok) {
+            console.warn('ElevenLabs TTS failed, falling back to browser voice');
+            speakZombieFallback(text, gender, region);
+            return;
+        }
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.volume = 1.0;
+        currentZombieAudio = audio;
+
+        audio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+            currentZombieAudio = null;
+        };
+        audio.onerror = () => {
+            URL.revokeObjectURL(audioUrl);
+            currentZombieAudio = null;
+        };
+
+        await audio.play();
+    } catch (err) {
+        console.warn('ElevenLabs error:', err.message, '— falling back to browser voice');
+        speakZombieFallback(text, gender, region);
+    }
+}
+
+function stopZombieSpeech() {
+    if (currentZombieAudio) {
+        currentZombieAudio.pause();
+        currentZombieAudio = null;
+    }
+    // Also stop any browser fallback speech
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
+// Browser SpeechSynthesis fallback — used when ElevenLabs is unavailable
+function speakZombieFallback(text, gender, region) {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    synth.cancel();
+
+    const cleanText = text.replace(/\*[^*]+\*/g, '... ');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+
+    // Zombie-ify: low pitch, slow rate
+    utterance.pitch = gender === 'female' ? 0.7 : 0.35;
+    utterance.rate = 0.82;
     utterance.volume = 1.0;
 
-    if (zombieVoice) utterance.voice = zombieVoice;
+    // Try to pick an English voice
+    const voices = synth.getVoices();
+    const english = voices.filter(v => v.lang.startsWith('en'));
+    if (english.length) utterance.voice = english[0];
 
-    console.log(`Speaking as ${region}/${gender}: pitch=${utterance.pitch.toFixed(2)}, rate=${utterance.rate}, voice=${zombieVoice?.name}`);
     synth.speak(utterance);
 }
 
@@ -244,7 +145,7 @@ function startRecording() {
     chatMicBtn.classList.add('recording');
     chatMicBtn.title = 'Listening...';
     // Stop zombie from talking while user speaks
-    window.speechSynthesis.cancel();
+    stopZombieSpeech();
     recognition.start();
 }
 
@@ -582,9 +483,6 @@ function showChat(figure, openingMessage) {
     landingPage.style.display = 'none';
     chatSection.classList.add('active');
 
-    // Select the right voice for this character's culture and gender
-    selectZombieVoice(figure.voice_gender, figure.voice_region);
-
     chatSidebarImage.src = figure.image_url;
     chatFigureName.textContent = figure.name;
     chatFigureDetail.textContent = `${figure.location} — ${figure.era}`;
@@ -799,7 +697,7 @@ chatMicBtn.addEventListener('click', () => {
 
 // Back to landing
 document.getElementById('chat-back-btn').addEventListener('click', async () => {
-    window.speechSynthesis.cancel(); // Stop any zombie speech
+    stopZombieSpeech(); // Stop any zombie speech
     await endConversation();
     currentFigure = null;
     chatSection.classList.remove('active');
@@ -810,10 +708,4 @@ document.getElementById('chat-back-btn').addEventListener('click', async () => {
 initBackground();
 initSpeechRecognition();
 checkAuthStatus();
-// Pre-load voices (some browsers load async, some sync)
-window.speechSynthesis.getVoices();
-window.speechSynthesis.onvoiceschanged = () => {
-    const voices = window.speechSynthesis.getVoices();
-    console.log(`Loaded ${voices.length} voices`);
-};
 searchInput.focus();
