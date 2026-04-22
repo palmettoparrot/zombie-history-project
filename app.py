@@ -137,6 +137,12 @@ VOICE_SETTINGS_OVERRIDES = {
     },
 }
 
+# Voices that are already slow/menacing by nature — don't apply our extra slowdown
+# on the frontend (otherwise they become unintelligibly draggy). These play at 1.0.
+# Everything else plays at the default zombie rate (~0.925) for the undead drawl.
+NORMAL_SPEED_VOICES = {"larauque", "victor", "caleb"}
+DEFAULT_ZOMBIE_PLAYBACK_RATE = 0.925
+
 # Region-to-voice mapping + per-region voice settings
 # Each region maps to: voice IDs AND voice_settings overrides
 # Stability: 0.15-0.20 = dramatic/guttural, 0.20-0.30 = expressive, 0.30-0.40 = measured
@@ -1341,11 +1347,18 @@ def speak():
             print(f"ElevenLabs error {response.status_code}: {response.text[:200]}")
             return jsonify({"error": "Voice generation failed"}), 502
 
+        # Determine playback rate — some voices are naturally slow and shouldn't
+        # be slowed further by the frontend's universal zombie drawl.
+        playback_rate = 1.0 if voice_key in NORMAL_SPEED_VOICES else DEFAULT_ZOMBIE_PLAYBACK_RATE
+
         # Return the MP3 audio directly
         return Response(
             response.content,
             mimetype="audio/mpeg",
-            headers={"Cache-Control": "no-store"},
+            headers={
+                "Cache-Control": "no-store",
+                "X-Playback-Rate": str(playback_rate),
+            },
         )
 
     except requests.Timeout:

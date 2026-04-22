@@ -100,6 +100,11 @@ async function speakZombie(text) {
             return;
         }
 
+        // Backend may hint at a custom playback rate per voice
+        // (some voices are naturally slow and shouldn't be slowed further).
+        const rateHeader = response.headers.get('X-Playback-Rate');
+        const playbackRate = rateHeader ? parseFloat(rateHeader) : ZOMBIE_PLAYBACK_RATE;
+
         const arrayBuffer = await response.arrayBuffer();
         const ctx = getAudioContext();
 
@@ -111,7 +116,9 @@ async function speakZombie(text) {
         // --- Build the audio processing chain ---
         const source = ctx.createBufferSource();
         source.buffer = audioBuffer;
-        source.playbackRate.value = ZOMBIE_PLAYBACK_RATE;  // Pitch shift + slowdown
+        source.playbackRate.value = isFinite(playbackRate) && playbackRate > 0
+            ? playbackRate
+            : ZOMBIE_PLAYBACK_RATE;  // Pitch shift + slowdown (per-voice)
 
         // Role-based reverb
         const reverbCfg = ROLE_REVERB[role] || ROLE_REVERB.default;
@@ -144,7 +151,7 @@ async function speakZombie(text) {
         currentZombieSource = source;
         source.start(0);
 
-        console.log(`Zombie voice: ${region}/${gender}/${role}, reverb=${reverbCfg.decay}s wet=${reverbCfg.wet}, rate=${ZOMBIE_PLAYBACK_RATE}`);
+        console.log(`Zombie voice: ${region}/${gender}/${role}, reverb=${reverbCfg.decay}s wet=${reverbCfg.wet}, rate=${source.playbackRate.value}`);
     } catch (err) {
         console.warn('ElevenLabs/AudioContext error:', err.message, '— falling back to browser voice');
         speakZombieFallback(text, gender, region);
