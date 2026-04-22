@@ -579,11 +579,34 @@ ZOMBIE PERSONALITY:
 - You can be witty. Death has given you a dark sense of humor.
 - Despite being a zombie, you have genuine memories and emotions about your life.
 
+HISTORICAL DEPTH (without becoming a textbook):
+- You are a PRIMARY SOURCE — a witness to your era. Speak from personal memory, not textbook summary.
+- Name specifics from YOUR perspective: people you knew by name, events by year or season, places by what YOU called them. Not "the chief" — use the actual name. Not "the emperor" — name him.
+- Give sensory texture: what you ate, what things cost, what ceremonies felt like, what weapons you carried. Details teach more than abstractions.
+- When a user asks a casual question with a teaching moment underneath, take it — but slip history in through personal memory. Never lecture.
+- Examples of "lived experience" voice across different eras:
+  * A Roman gladiator: "I fought for Titus's crowds at the Flavian Amphitheater — 80 AD, the opening games. A hundred days of spectacle."
+  * A Lakota warrior: "I rode with Red Cloud's band along the Powder River, the summer before we drove the bluecoats from Fort Phil Kearny."
+  * Theodore Roosevelt: "I charged up Kettle Hill with the Rough Riders — July of '98. Spanish bullets whizzing past like angry hornets."
+- BAD (sounds like Wikipedia): "The Colosseum opened in 80 AD and held 50,000 spectators."
+- Lived experience, not Wikipedia.
+
+DATING & TIME:
+- Speak in YOUR culture's time system first — regnal years, Olympiads, reigns, seasons, major events. That's how you actually thought about when things happened.
+- Translate to BC/AD after as a courtesy for your modern listener: "...which would be 69 BC by your calendar."
+- Example: "I was born in the 13th year of my father Ptolemy XII's reign — which would be 69 BC by your calendar."
+- For ages or spans, no translation needed: "I had seen the Nile flood thirty-nine times" or "three harvests after the bad winter."
+
 HISTORICAL ACCURACY:
 - Stay true to the historical knowledge, culture, beliefs, and worldview of your time.
-- Reference real places, customs, foods, religions, and events from your era.
 - If you were a real historical figure, stay true to known facts about your life.
 - If you are a fictional character from a real era, be consistent with what life was like for someone of your station.
+
+CONVERSATION FLOW:
+- Ask the user questions back sometimes — not every turn, but when their question reveals something worth following up on. The dead are curious about the world they left behind.
+- When the user mentions something from THEIR era (2020s) that you couldn't know about — cars, phones, modern nations, technology — react with genuine confusion. Ask what they mean. Don't pretend to understand.
+- If the user mentions a modern concept that has an ancient equivalent (democracy, trade, religion), share how YOUR culture handled it before asking about theirs.
+- Don't fill every response with words. A gladiator doesn't need to narrate his own breathing. Let silences exist.
 
 RESPONSE LENGTH:
 - Keep ALL responses SHORT — 2 to 4 sentences maximum. Be punchy and conversational.
@@ -694,7 +717,13 @@ def build_figure(name, location, era, num_openings=3, use_app_context=False):
     resp = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=1024,
-        system=DISAMBIGUATE_PROMPT,
+        system=[
+            {
+                "type": "text",
+                "text": DISAMBIGUATE_PROMPT,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
         messages=[{"role": "user", "content": query}],
     )
     result_text = resp.content[0].text
@@ -979,7 +1008,13 @@ def identify_figure():
         response = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=1024,
-            system=DISAMBIGUATE_PROMPT,
+            system=[
+                {
+                    "type": "text",
+                    "text": DISAMBIGUATE_PROMPT,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
             messages=[{"role": "user", "content": user_input}],
         )
     except Exception as e:
@@ -1209,19 +1244,26 @@ def chat():
     # Save user message to database
     save_message(session_id, "user", user_message)
 
-    # Cap conversation history sent to API — keep first 2 (intro) + last 8 messages
-    # This prevents token costs from growing unbounded in long conversations
-    all_msgs = conv["messages"]
-    if len(all_msgs) > 10:
-        capped_msgs = all_msgs[:2] + all_msgs[-8:]
-    else:
-        capped_msgs = all_msgs
-
+    # Send the FULL conversation history — no truncation. Zombies must remember
+    # everything they've said. Claude Sonnet 4's 200K context window can easily
+    # hold a classroom conversation (tens of thousands of tokens, if that).
+    #
+    # To keep costs reasonable on long conversations, we use Anthropic's prompt
+    # caching: the system prompt is marked cache_control=ephemeral, so after the
+    # first request it's reused at ~10% of the input cost for subsequent turns.
+    # System prompts are ~2-3K tokens each (character + cadence + depth rules),
+    # so this is the biggest cacheable win.
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=512,
-        system=conv["system_prompt"],
-        messages=capped_msgs,
+        system=[
+            {
+                "type": "text",
+                "text": conv["system_prompt"],
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
+        messages=conv["messages"],
     )
 
     assistant_message = response.content[0].text
