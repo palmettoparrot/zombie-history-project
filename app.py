@@ -14,7 +14,7 @@ import requests
 import anthropic
 from google import genai
 from google.genai import types
-from flask import Flask, render_template, request, jsonify, session, g, Response
+from flask import Flask, render_template, request, jsonify, session, g, Response, send_from_directory
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
@@ -213,10 +213,19 @@ REGION_ELEVENLABS = {
                   "settings": {"stability": 0.18, "similarity_boost": 0.70, "style": 0.48}},
 }
 
-DATABASE = os.path.join(os.path.dirname(__file__), "conversations.db")
+# Data directory — persistent disk on Render, local folder for dev.
+# /var/data is where the Render persistent disk is mounted.
+# Everything here survives deploys: SQLite DB + generated portraits.
+if os.path.isdir("/var/data"):
+    DATA_DIR = "/var/data"
+else:
+    DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+
+DATABASE = os.path.join(DATA_DIR, "conversations.db")
 
 # Directory for generated images (Imagen returns bytes, not URLs)
-GENERATED_IMAGES_DIR = os.path.join(os.path.dirname(__file__), "static", "generated")
+GENERATED_IMAGES_DIR = os.path.join(DATA_DIR, "generated")
 os.makedirs(GENERATED_IMAGES_DIR, exist_ok=True)
 
 # Fallback image shown when Imagen fails or is blocked by safety filter.
@@ -646,7 +655,7 @@ def get_image_url(prompt):
             with open(filepath, "wb") as f:
                 f.write(image_bytes)
 
-            url = f"/static/generated/{filename}"
+            url = f"/generated/{filename}"
             image_cache[cache_key] = url
             print(f"Imagen 4 image saved: {filename}")
             return url
@@ -869,6 +878,12 @@ def auth_logout():
 def service_worker():
     """Serve service worker from root scope for PWA support."""
     return app.send_static_file("sw.js"), 200, {"Content-Type": "application/javascript", "Service-Worker-Allowed": "/"}
+
+
+@app.route("/generated/<path:filename>")
+def serve_generated_image(filename):
+    """Serve generated zombie portraits from the persistent data directory."""
+    return send_from_directory(GENERATED_IMAGES_DIR, filename, max_age=604800)
 
 
 @app.route("/api/health")

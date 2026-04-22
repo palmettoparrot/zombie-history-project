@@ -1,7 +1,7 @@
 // Service Worker for The Zombie History Project (PWA)
 // Caches the app shell for fast loading; always fetches fresh API data.
 
-const CACHE_VERSION = '15';
+const CACHE_VERSION = '16';
 const CACHE_NAME = `zombie-history-v${CACHE_VERSION}`;
 
 // App shell — static assets that rarely change
@@ -71,7 +71,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Generated images — cache after first fetch
-  if (url.pathname.startsWith('/static/generated/')) {
+  if (url.pathname.startsWith('/generated/') || url.pathname.startsWith('/static/generated/')) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         if (cached) return cached;
