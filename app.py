@@ -330,6 +330,39 @@ def init_db():
     db.close()
 
 
+def track_anon_session(session_id):
+    """Track this session_id as an anonymous conversation in the user's Flask session.
+    When they later register/log in, we claim these conversations for their account."""
+    if session.get("user_id"):
+        return  # Already logged in, nothing to track
+    anon = session.get("anon_sessions", [])
+    if session_id not in anon:
+        anon.append(session_id)
+        # Cap at 50 most recent to prevent Flask session cookie from growing unbounded
+        session["anon_sessions"] = anon[-50:]
+
+
+def claim_anon_conversations(user_id):
+    """Claim any anonymous conversations this browser started for the given user.
+    Called after successful register/login/Google auth."""
+    anon_sessions = session.get("anon_sessions", [])
+    if not anon_sessions:
+        return 0
+    db = get_db()
+    placeholders = ",".join("?" * len(anon_sessions))
+    cur = db.execute(
+        f"UPDATE conversations SET user_id = ? "
+        f"WHERE session_id IN ({placeholders}) AND user_id IS NULL",
+        [user_id] + anon_sessions,
+    )
+    claimed = cur.rowcount
+    db.commit()
+    session["anon_sessions"] = []  # Clear the list now that they're claimed
+    if claimed:
+        print(f"Claimed {claimed} anonymous conversations for user {user_id}")
+    return claimed
+
+
 def save_conversation(session_id, figure, system_prompt, image_url, user_id=None):
     """Save a new conversation to the database."""
     db = get_db()
@@ -824,6 +857,9 @@ def auth_register():
     session["user_id"] = user["id"]
     session.permanent = True
 
+    # Claim any anonymous conversations this browser has been having
+    claim_anon_conversations(user["id"])
+
     return jsonify({"user": {"id": user["id"], "email": user["email"], "username": user["username"]}})
 
 
@@ -844,6 +880,9 @@ def auth_login():
 
     session["user_id"] = user["id"]
     session.permanent = True
+
+    # Claim any anonymous conversations this browser has been having
+    claim_anon_conversations(user["id"])
 
     return jsonify({"user": {"id": user["id"], "email": user["email"], "username": user["username"]}})
 
@@ -881,6 +920,8 @@ def auth_google():
                 db.execute("UPDATE users SET google_id = ? WHERE id = ?", (google_id, user["id"]))
                 db.commit()
             session["user_id"] = user["id"]
+            # Claim any anonymous conversations this browser has been having
+            claim_anon_conversations(user["id"])
             return jsonify({"user": {"id": user["id"], "email": user["email"], "username": user["username"]}})
         else:
             # Create new user
@@ -893,6 +934,8 @@ def auth_google():
             user = db.execute("SELECT id, email, username FROM users WHERE google_id = ?", (google_id,)).fetchone()
             session["user_id"] = user["id"]
             session.permanent = True
+            # Claim any anonymous conversations this browser has been having
+            claim_anon_conversations(user["id"])
             return jsonify({"user": {"id": user["id"], "email": user["email"], "username": user["username"]}})
 
     except Exception as e:
@@ -1163,6 +1206,8 @@ def start_conversation():
             image_url = figure.get("image_url", prefab["image_url"])
             user_id = session.get("user_id")
             save_conversation(session_id, figure, system_prompt, image_url, user_id=user_id)
+            if not user_id:
+                track_anon_session(session_id)
             save_message(session_id, "user", "You have just risen from your grave. Introduce yourself.")
             save_message(session_id, "assistant", opening_message)
 
@@ -1206,6 +1251,8 @@ def start_conversation():
     image_url = figure.get("image_url", "")
     user_id = session.get("user_id")
     save_conversation(session_id, figure, system_prompt, image_url, user_id=user_id)
+    if not user_id:
+        track_anon_session(session_id)
     save_message(session_id, "user", "You have just risen from your grave. Introduce yourself.")
     save_message(session_id, "assistant", opening_message)
 
