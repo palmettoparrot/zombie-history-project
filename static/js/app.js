@@ -31,7 +31,10 @@ const typingIndicator = document.getElementById('typing-indicator');
 // ===== ZOMBIE VOICE (ElevenLabs + Web Audio API processing) =====
 let currentZombieSource = null;   // Currently playing AudioBufferSourceNode
 let zombieAudioContext = null;    // Shared AudioContext
-let zombieVoiceEnabled = true;    // User can toggle voice on/off
+// Voice on/off — initialized from localStorage so the user's choice persists.
+// When OFF, speakZombie() returns immediately without calling /api/speak,
+// which saves ElevenLabs character quota.
+let zombieVoiceEnabled = localStorage.getItem('zombieVoiceEnabled') !== 'false';
 
 // Universal zombie audio effect: slower playback = lower pitch + slower speech
 // 0.925 = roughly -1.1 semitones + 7.5% slower.
@@ -879,6 +882,33 @@ document.getElementById('chat-back-btn').addEventListener('click', async () => {
     chatSection.classList.remove('active');
     showLanding();
 });
+
+// Voice toggle — persists in localStorage. When muted, speakZombie() returns
+// early without calling /api/speak, saving ElevenLabs character quota.
+const voiceBtn = document.getElementById('chat-voice-btn');
+function updateVoiceButton() {
+    if (!voiceBtn) return;
+    if (zombieVoiceEnabled) {
+        voiceBtn.classList.remove('muted');
+        voiceBtn.title = 'Voice on — click to mute';
+    } else {
+        voiceBtn.classList.add('muted');
+        voiceBtn.title = 'Voice muted — click to enable';
+    }
+}
+updateVoiceButton();  // Reflect initial state from localStorage
+
+if (voiceBtn) {
+    voiceBtn.addEventListener('click', () => {
+        zombieVoiceEnabled = !zombieVoiceEnabled;
+        localStorage.setItem('zombieVoiceEnabled', zombieVoiceEnabled ? 'true' : 'false');
+        updateVoiceButton();
+        // If turning off mid-speech, stop whatever is currently playing
+        if (!zombieVoiceEnabled) {
+            stopZombieSpeech();
+        }
+    });
+}
 
 // ===== INIT =====
 initBackground();
