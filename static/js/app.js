@@ -31,10 +31,11 @@ const typingIndicator = document.getElementById('typing-indicator');
 // ===== ZOMBIE VOICE (ElevenLabs + Web Audio API processing) =====
 let currentZombieSource = null;   // Currently playing AudioBufferSourceNode
 let zombieAudioContext = null;    // Shared AudioContext
-// Voice on/off — initialized from localStorage so the user's choice persists.
-// When OFF, speakZombie() returns immediately without calling /api/speak,
-// which saves ElevenLabs character quota.
-let zombieVoiceEnabled = localStorage.getItem('zombieVoiceEnabled') !== 'false';
+// Voice on/off — DEFAULTS TO OFF to save ElevenLabs character quota
+// (~80% of variable cost per conversation). User must explicitly opt in
+// via the prominent "Hear voice" button in the chat header.
+// Once enabled, the choice persists via localStorage.
+let zombieVoiceEnabled = localStorage.getItem('zombieVoiceEnabled') === 'true';
 
 // Universal zombie audio effect: slower playback = lower pitch + slower speech
 // 0.925 = roughly -1.1 semitones + 7.5% slower.
@@ -883,17 +884,18 @@ document.getElementById('chat-back-btn').addEventListener('click', async () => {
     showLanding();
 });
 
-// Voice toggle — persists in localStorage. When muted, speakZombie() returns
-// early without calling /api/speak, saving ElevenLabs character quota.
+// Voice toggle — defaults to OFF to save ElevenLabs character quota.
+// The button is a prominent green CTA when muted (its default state) and
+// shrinks to a subtle icon-only mute button once the user enables voice.
 const voiceBtn = document.getElementById('chat-voice-btn');
 function updateVoiceButton() {
     if (!voiceBtn) return;
     if (zombieVoiceEnabled) {
-        voiceBtn.classList.remove('muted');
+        voiceBtn.classList.add('active');
         voiceBtn.title = 'Voice on — click to mute';
     } else {
-        voiceBtn.classList.add('muted');
-        voiceBtn.title = 'Voice muted — click to enable';
+        voiceBtn.classList.remove('active');
+        voiceBtn.title = 'Click to hear the zombie speak (uses voice quota)';
     }
 }
 updateVoiceButton();  // Reflect initial state from localStorage

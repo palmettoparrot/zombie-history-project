@@ -746,40 +746,57 @@ body {
     color: var(--accent-red);
 }
 
-/* Voice toggle button — speaker icon, switches between on/off */
+/* Voice toggle button.
+   DEFAULT (voice off / muted) → prominent CTA: green accent + "Hear voice" text.
+   ACTIVE (voice on) → subtle icon-only button to mute. */
 .chat-voice-btn {
-    width: 40px;
-    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
     border-radius: 6px;
-    border: 1px solid var(--text-dim);
-    background: transparent;
-    color: var(--text-secondary);
+    border: 1px solid var(--accent-green);
+    background: rgba(74, 122, 58, 0.15);
+    color: var(--accent-green-glow);
     cursor: pointer;
-    font-size: 1.1rem;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
     transition: all 0.3s ease;
     line-height: 1;
+    box-shadow: 0 0 12px rgba(90, 154, 74, 0.2);
 }
 
 .chat-voice-btn:hover {
-    border-color: var(--accent-green);
-    color: var(--accent-green-glow);
+    background: rgba(74, 122, 58, 0.3);
+    box-shadow: 0 0 18px rgba(90, 154, 74, 0.4);
 }
 
-/* Show only the appropriate icon based on voice state */
-.chat-voice-btn .voice-icon-off { display: none; }
-.chat-voice-btn.muted .voice-icon-on { display: none; }
-.chat-voice-btn.muted .voice-icon-off { display: inline; }
-.chat-voice-btn.muted {
-    color: var(--text-dim);
-    border-color: var(--border-color);
+/* Show CTA text + icon when muted, just icon when on */
+.chat-voice-btn .voice-content-on { display: none; }
+.chat-voice-btn .voice-content-off { display: inline; }
+
+/* Active (voice on) state — subtle icon-only button */
+.chat-voice-btn.active {
+    width: 40px;
+    padding: 0;
+    border-color: var(--text-dim);
+    background: transparent;
+    color: var(--text-secondary);
+    box-shadow: none;
+    font-size: 1.1rem;
 }
-.chat-voice-btn.muted:hover {
-    color: var(--accent-green-glow);
-    border-color: var(--accent-green);
+.chat-voice-btn.active:hover {
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+    background: transparent;
+    box-shadow: none;
 }
+.chat-voice-btn.active .voice-content-on { display: inline; }
+.chat-voice-btn.active .voice-content-off { display: none; }
 
 /* Messages area */
 .chat-messages {
