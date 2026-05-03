@@ -1339,4 +1339,23 @@ body {
         border-top: none;
         border-left: 1px solid var(--border-color);
     }
+
+    /* Tighten chat header on mobile so the voice button + back button both fit */
+    .chat-header {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+    .chat-header-right {
+        gap: 8px;
+    }
+    .chat-voice-btn {
+        padding: 0 10px;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    .chat-back-btn {
+        font-size: 0.75rem;
+        padding: 8px 12px;
+        letter-spacing: 0.5px;
+    }
 }

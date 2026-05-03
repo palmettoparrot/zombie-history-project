@@ -64,6 +64,64 @@ function getAudioContext() {
     return zombieAudioContext;
 }
 
+// === iOS SAFARI AUDIO UNLOCK ===
+// iOS Safari requires audio playback to be initiated within a user gesture,
+// AND the AudioContext must be resumed within that same gesture. After the
+// first unlock, audio works freely until the page reloads. We listen for any
+// touch/click on the document and run the unlock once.
+let iosAudioUnlocked = false;
+function unlockAudioForIOS() {
+    if (iosAudioUnlocked) return;
+    iosAudioUnlocked = true;
+
+    // 1. Wake up the Web Audio API (used for zombie voices + reverb pipeline)
+    try {
+        const ctx = getAudioContext();
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+        // Play a single silent sample — required to fully unlock iOS audio
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(ctx.destination);
+        src.start(0);
+    } catch (e) {}
+
+    // 2. Wake up the HTMLAudioElement instances (loading music + sound effects)
+    // by playing each one muted briefly. Without this, .play() called
+    // asynchronously later will be blocked by iOS autoplay policy.
+    const audioEls = [];
+    if (typeof loadingMusic !== 'undefined') audioEls.push(loadingMusic);
+    if (typeof cryptThud !== 'undefined') audioEls.push(cryptThud);
+    if (typeof cryptCreak !== 'undefined') audioEls.push(cryptCreak);
+    if (typeof cryptRumble !== 'undefined') audioEls.push(cryptRumble);
+
+    audioEls.forEach(audio => {
+        try {
+            const wasMuted = audio.muted;
+            const wasVolume = audio.volume;
+            audio.muted = true;
+            const p = audio.play();
+            if (p && p.then) {
+                p.then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.muted = wasMuted;
+                    audio.volume = wasVolume;
+                }).catch(() => {
+                    audio.muted = wasMuted;
+                    audio.volume = wasVolume;
+                });
+            } else {
+                audio.pause();
+                audio.muted = wasMuted;
+            }
+        } catch (e) {}
+    });
+}
+// Run once on the first touch or click anywhere
+document.addEventListener('touchstart', unlockAudioForIOS, { once: true, passive: true });
+document.addEventListener('click', unlockAudioForIOS, { once: true });
+
 // Generate a synthetic impulse response (IR) for convolution reverb.
 // No external files needed — we build the IR on the fly.
 function generateImpulseResponse(audioContext, decaySeconds) {
@@ -467,6 +525,21 @@ const loadingMusic = new Audio('/static/sounds/dead-awakened.mp3');
 loadingMusic.loop = true;
 loadingMusic.volume = 0.5;
 
+// Hard-stop the loading music. Disable looping FIRST so even if pause()
+// silently fails on iOS, the audio can't restart. Then reset state for
+// the next play.
+let loadingMusicFadeInterval = null;
+let loadingMusicFailsafe = null;
+function stopLoadingMusic() {
+    if (loadingMusicFadeInterval) { clearInterval(loadingMusicFadeInterval); loadingMusicFadeInterval = null; }
+    if (loadingMusicFailsafe) { clearTimeout(loadingMusicFailsafe); loadingMusicFailsafe = null; }
+    try { loadingMusic.loop = false; } catch (e) {}
+    try { loadingMusic.pause(); } catch (e) {}
+    try { loadingMusic.currentTime = 0; } catch (e) {}
+    loadingMusic.volume = 0.5;       // Reset volume for next play
+    loadingMusic.loop = true;        // Restore loop for next play
+}
+
 function showLoading() {
     const msg = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
     loadingText.textContent = msg.text;
@@ -483,8 +556,13 @@ function showLoading() {
 
     loadingOverlay.classList.add('active');
 
-    // Play music (may be blocked by autoplay policy on first interaction,
-    // but by this point the user has clicked a button so it should be allowed)
+    // Cancel any in-flight fade-out / failsafe before starting fresh
+    if (loadingMusicFadeInterval) { clearInterval(loadingMusicFadeInterval); loadingMusicFadeInterval = null; }
+    if (loadingMusicFailsafe) { clearTimeout(loadingMusicFailsafe); loadingMusicFailsafe = null; }
+
+    // Reset state and play
+    loadingMusic.volume = 0.5;
+    loadingMusic.loop = true;
     loadingMusic.currentTime = 0;
     loadingMusic.play().catch(() => {});
 }
@@ -492,14 +570,15 @@ function showLoading() {
 function hideLoading() {
     loadingOverlay.classList.remove('active');
 
-    // Fade out the music
-    const fadeOut = setInterval(() => {
+    // Failsafe: if for any reason the fade-out doesn't complete (e.g. iOS
+    // Safari ignoring volume changes mid-playback), force-stop after 1.5s.
+    loadingMusicFailsafe = setTimeout(stopLoadingMusic, 1500);
+
+    loadingMusicFadeInterval = setInterval(() => {
         if (loadingMusic.volume > 0.05) {
             loadingMusic.volume = Math.max(0, loadingMusic.volume - 0.05);
         } else {
-            loadingMusic.pause();
-            loadingMusic.volume = 0.5;  // Reset for next time
-            clearInterval(fadeOut);
+            stopLoadingMusic();
         }
     }, 80);
 }
@@ -586,14 +665,24 @@ function stopCryptAtmosphere() {
         cryptMessageInterval = null;
     }
 
-    // Fade out all crypt sounds
+    // Fade out all crypt sounds, with a hard-stop failsafe in case iOS Safari
+    // ignores the volume changes or pause() during a fade.
     [cryptThud, cryptCreak, cryptRumble].forEach(audio => {
+        const failsafe = setTimeout(() => {
+            try { audio.loop = false; } catch (e) {}
+            try { audio.pause(); } catch (e) {}
+            try { audio.currentTime = 0; } catch (e) {}
+        }, 1500);
+
         const fadeOut = setInterval(() => {
             if (audio.volume > 0.03) {
                 audio.volume = Math.max(0, audio.volume - 0.03);
             } else {
-                audio.pause();
                 clearInterval(fadeOut);
+                clearTimeout(failsafe);
+                try { audio.loop = false; } catch (e) {}
+                try { audio.pause(); } catch (e) {}
+                try { audio.currentTime = 0; } catch (e) {}
             }
         }, 60);
     });
