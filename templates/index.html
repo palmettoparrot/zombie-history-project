@@ -33,16 +33,21 @@
     <!-- Background atmosphere -->
     <canvas id="background-canvas"></canvas>
 
+    <!-- User status pinned to the top-right corner like a typical account chip -->
+    <div class="user-status user-status-corner" id="user-status"></div>
+
     <!-- ========== LANDING PAGE ========== -->
     <div class="app-container" id="landing-page">
         <header class="site-header">
-            <h1 class="site-title">
-                <img src="{{ url_for('static', filename='images/logo-large.png') }}"
-                     alt="The Zombie History Project"
-                     class="site-logo">
-            </h1>
-            <p class="site-subtitle">Awaken the dead. Hear their stories.</p>
-            <div class="user-status" id="user-status"></div>
+            <div class="site-title-row">
+                <span class="site-tagline site-tagline-left">Awaken the dead.</span>
+                <h1 class="site-title">
+                    <img src="{{ url_for('static', filename='images/logo-large.png') }}"
+                         alt="The Zombie History Project"
+                         class="site-logo">
+                </h1>
+                <span class="site-tagline site-tagline-right">Hear their stories.</span>
+            </div>
         </header>
 
         <div class="prompt-section">

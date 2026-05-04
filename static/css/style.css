@@ -79,16 +79,28 @@ body {
     text-shadow: 0 0 20px rgba(90, 154, 74, 0.5), 0 0 40px rgba(90, 154, 74, 0.2);
 }
 
+/* Title row — tagline + logo + tagline laid out horizontally.
+   The logo sits between the two halves of the tagline. */
+.site-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+    width: 100%;
+    flex-wrap: nowrap;
+}
+
 /* Logo image — replaces the typographic title in the site header.
    The seal already contains the wordmark, so showing both would be
    redundant. The glow tint matches the rest of the brand. */
 .site-logo {
-    width: 220px;
-    height: 220px;
-    max-width: 70vw;
+    width: 280px;
+    height: 280px;
+    max-width: 50vw;
     object-fit: contain;
     display: block;
-    margin: 0 auto;
+    margin: 0;
+    flex-shrink: 0;
     filter: drop-shadow(0 0 30px rgba(74, 122, 58, 0.25))
             drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
     transition: filter 0.3s ease;
@@ -104,6 +116,31 @@ body {
     width: 140px;
     height: 140px;
     max-width: 50vw;
+}
+
+/* Tagline halves flanking the logo — left says "Awaken the dead.",
+   right says "Hear their stories." Larger and more readable than the
+   old single-line subtitle. */
+.site-tagline {
+    font-family: 'Cinzel', serif;
+    font-style: italic;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    letter-spacing: 2px;
+    text-shadow: 0 0 18px rgba(74, 122, 58, 0.3),
+                 0 2px 4px rgba(0, 0, 0, 0.8);
+    flex: 1;
+    min-width: 0;       /* prevents flex blowout on narrow viewports */
+    max-width: 320px;
+    line-height: 1.2;
+}
+
+.site-tagline-left {
+    text-align: right;
+}
+
+.site-tagline-right {
+    text-align: left;
 }
 
 .site-subtitle {
@@ -1021,7 +1058,7 @@ body {
 /* === USER STATUS (header) === */
 .user-status {
     font-family: 'Crimson Text', serif;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--text-secondary);
     margin-top: 4px;
 }
@@ -1037,13 +1074,39 @@ body {
 }
 
 .user-status .user-greeting {
-    color: var(--text-secondary);
+    color: var(--text-primary);
 }
 
 .user-status .logout-link {
     color: var(--text-dim);
     margin-left: 8px;
-    font-size: 0.75rem;
+    font-size: 0.78rem;
+}
+
+/* Pinned to the top-right corner like a typical account chip.
+   Above all page content via fixed positioning. */
+.user-status-corner {
+    position: fixed;
+    top: 14px;
+    right: 18px;
+    margin-top: 0;
+    padding: 6px 14px;
+    background: rgba(20, 20, 20, 0.75);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    white-space: nowrap;
+    max-width: calc(100vw - 36px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Hide entirely if it's empty (pre-login + before auth check returns) */
+.user-status-corner:empty {
+    display: none;
 }
 
 /* === AUTH MODAL === */
@@ -1309,13 +1372,37 @@ body {
 
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
+    /* Stack the taglines above & below the logo on mobile */
+    .site-title-row {
+        flex-direction: column;
+        gap: 6px;
+    }
+    .site-tagline {
+        font-size: 1.1rem;
+        max-width: 90vw;
+        text-align: center !important;
+    }
     .site-logo {
-        width: 170px;
-        height: 170px;
+        width: 200px;
+        height: 200px;
+        order: 2;
+    }
+    .site-tagline-left {
+        order: 1;
+    }
+    .site-tagline-right {
+        order: 3;
     }
     .site-logo-sm {
         width: 110px;
         height: 110px;
+    }
+    /* Account chip — slightly smaller padding on mobile */
+    .user-status-corner {
+        top: 10px;
+        right: 10px;
+        padding: 5px 10px;
+        font-size: 0.78rem;
     }
     .site-title {
         font-size: 1.8rem;
