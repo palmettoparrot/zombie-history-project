@@ -1,10 +1,13 @@
 // Service Worker for The Zombie History Project (PWA)
 // Caches the app shell for fast loading; always fetches fresh API data.
 
-const CACHE_VERSION = '22';
+const CACHE_VERSION = '23';
 const CACHE_NAME = `zombie-history-v${CACHE_VERSION}`;
 
-// App shell — static assets that rarely change
+// App shell — static assets that rarely change.
+// NOTE: cache.addAll() is atomic — if ANY file fails, the whole SW
+// installation fails. So we keep this list lean and reliable. Only
+// files that are actively referenced on the site go here.
 const APP_SHELL = [
   '/',
   '/static/css/style.css',
@@ -13,8 +16,9 @@ const APP_SHELL = [
   '/static/manifest.json',
   '/static/icons/icon-192x192.png',
   '/static/icons/icon-512x512.png',
-  // Logo & favicons
-  '/static/images/logo.png',
+  // Logo & favicons (the full-size logo.png is intentionally excluded —
+  // the site uses logo-large.png; the source file isn't worth 2.5MB of
+  // pre-cache risk on slow mobile connections)
   '/static/images/logo-large.png',
   '/static/images/favicon-32.png',
   '/static/images/favicon-64.png',
@@ -42,11 +46,19 @@ const APP_SHELL = [
   '/static/images/loading-zombie.jpg',
 ];
 
-// Install: pre-cache the app shell
+// Install: pre-cache the app shell.
+// Use Promise.allSettled instead of cache.addAll so a single failed file
+// (network glitch, missing asset, etc.) doesn't fail the whole install
+// and leave the user in a broken state.
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(APP_SHELL);
+      return Promise.allSettled(
+        APP_SHELL.map((url) => cache.add(url).catch((err) => {
+          console.warn(`SW: failed to cache ${url}:`, err);
+          return null;
+        }))
+      );
     })
   );
   // Activate immediately (don't wait for old tabs to close)
