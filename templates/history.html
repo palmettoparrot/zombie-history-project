@@ -9,7 +9,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Zombie History">
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="64x64" href="{{ url_for('static', filename='images/favicon-64.png') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
@@ -20,7 +26,11 @@
     <!-- ========== HISTORY PAGE ========== -->
     <div class="app-container" id="history-page">
         <header class="site-header site-header-compact">
-            <h1 class="site-title site-title-sm">The <span class="zombie-text">Zombie</span> History Project</h1>
+            <h1 class="site-title site-title-sm">
+                <img src="{{ url_for('static', filename='images/logo-large.png') }}"
+                     alt="The Zombie History Project"
+                     class="site-logo site-logo-sm">
+            </h1>
             <p class="site-subtitle">The dead remember you.</p>
         </header>
 

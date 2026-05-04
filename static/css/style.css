@@ -69,13 +69,41 @@ body {
     text-transform: uppercase;
     color: var(--text-primary);
     text-shadow: 0 0 30px rgba(74, 122, 58, 0.3), 0 2px 4px rgba(0,0,0,0.8);
-    margin-bottom: 2px;
+    margin: 0 0 2px;
+    line-height: 0;
     white-space: nowrap;
 }
 
 .site-title .zombie-text {
     color: var(--accent-green-glow);
     text-shadow: 0 0 20px rgba(90, 154, 74, 0.5), 0 0 40px rgba(90, 154, 74, 0.2);
+}
+
+/* Logo image — replaces the typographic title in the site header.
+   The seal already contains the wordmark, so showing both would be
+   redundant. The glow tint matches the rest of the brand. */
+.site-logo {
+    width: 220px;
+    height: 220px;
+    max-width: 70vw;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+    filter: drop-shadow(0 0 30px rgba(74, 122, 58, 0.25))
+            drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+    transition: filter 0.3s ease;
+}
+
+.site-logo:hover {
+    filter: drop-shadow(0 0 40px rgba(90, 154, 74, 0.45))
+            drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+}
+
+/* Smaller logo for the history page header */
+.site-logo-sm {
+    width: 140px;
+    height: 140px;
+    max-width: 50vw;
 }
 
 .site-subtitle {
@@ -1281,6 +1309,14 @@ body {
 
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
+    .site-logo {
+        width: 170px;
+        height: 170px;
+    }
+    .site-logo-sm {
+        width: 110px;
+        height: 110px;
+    }
     .site-title {
         font-size: 1.8rem;
         letter-spacing: 3px;

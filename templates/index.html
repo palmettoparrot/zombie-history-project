@@ -9,7 +9,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Zombie History">
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="64x64" href="{{ url_for('static', filename='images/favicon-64.png') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+
+    <!-- Open Graph / social share -->
+    <meta property="og:title" content="The Zombie History Project">
+    <meta property="og:description" content="Colloquia cum mortuis — conversations with the dead.">
+    <meta property="og:image" content="{{ url_for('static', filename='images/logo-large.png', _external=True) }}">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% if google_client_id %}
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -23,7 +36,11 @@
     <!-- ========== LANDING PAGE ========== -->
     <div class="app-container" id="landing-page">
         <header class="site-header">
-            <h1 class="site-title">The <span class="zombie-text">Zombie</span> History Project</h1>
+            <h1 class="site-title">
+                <img src="{{ url_for('static', filename='images/logo-large.png') }}"
+                     alt="The Zombie History Project"
+                     class="site-logo">
+            </h1>
             <p class="site-subtitle">Awaken the dead. Hear their stories.</p>
             <div class="user-status" id="user-status"></div>
         </header>

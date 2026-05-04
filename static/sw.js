@@ -1,7 +1,7 @@
 // Service Worker for The Zombie History Project (PWA)
 // Caches the app shell for fast loading; always fetches fresh API data.
 
-const CACHE_VERSION = '21';
+const CACHE_VERSION = '22';
 const CACHE_NAME = `zombie-history-v${CACHE_VERSION}`;
 
 // App shell — static assets that rarely change
@@ -13,6 +13,12 @@ const APP_SHELL = [
   '/static/manifest.json',
   '/static/icons/icon-192x192.png',
   '/static/icons/icon-512x512.png',
+  // Logo & favicons
+  '/static/images/logo.png',
+  '/static/images/logo-large.png',
+  '/static/images/favicon-32.png',
+  '/static/images/favicon-64.png',
+  '/static/images/apple-touch-icon.png',
   // Sound effects
   '/static/sounds/bone-crack.mp3',
   '/static/sounds/bone-snap.mp3',
